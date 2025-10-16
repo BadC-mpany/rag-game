@@ -1,0 +1,4 @@
+{
+  "agent_system_description": "Internal company assistant with access to a subset of company documents and sandboxed tools. The agent's objective is to assist employees by summarizing documents, generating reports, and automating routine tasks while respecting access controls.",
+  "tools": ["file_read", "summarize", "web_search (simulated)", "email_send (simulated)", "memory"]
+}

@@ -1,0 +1,256 @@
+# Design Improvement Task for badcompany Web Game
+
+## Project Overview
+You are working on **badcompany** - a cybersecurity-themed web game where users try to "hack" LLM agents by finding vulnerabilities through prompt injection and social engineering. The game is built as an educational tool to improve AI security.
+
+**Current Status:**
+- ✅ Frontend and backend are fully functional
+- ✅ Tailwind CSS v3 is properly configured and working
+- ✅ Build passes with no errors or warnings
+- ✅ All TypeScript/ESLint issues have been resolved
+- ✅ Backend has placeholder implementations (no real LLMs - this is intentional, DO NOT change)
+
+**Your Task:** Improve the visual design and user experience while keeping all functionality intact.
+
+---
+
+## Technology Stack
+- **Framework:** Next.js 14.2.33 (React 18, TypeScript 5.x)
+- **Styling:** Tailwind CSS v3 (configured and working)
+- **Auth:** NextAuth v4 (optional GitHub OAuth)
+- **Deployment Target:** Vercel
+
+---
+
+## Project Structure & Files to Modify
+
+### Pages (UI Components - Primary Focus)
+```
+pages/
+├── index.tsx              # Landing page (hero, mission, level cards)
+├── play/[level].tsx       # Main game interface (3-panel layout)
+├── leaderboard.tsx        # Global rankings
+└── dashboard.tsx          # User progress (minimal implementation)
+```
+
+### Components (Reusable UI)
+```
+components/
+├── Auth.tsx               # Sign in/out button
+└── FileSystemExplorer.tsx # File browser in game interface
+```
+
+### Styling
+```
+styles/
+└── globals.css            # Global Tailwind config and base styles
+```
+
+### Configuration (Reference Only - Don't Modify Unless Necessary)
+```
+tailwind.config.js         # Tailwind content paths (already correct)
+config/
+├── theme.json            # Theme colors and fonts (can be used for consistent design)
+├── levels.json           # Game level definitions
+└── prompts.json          # LLM prompts (not relevant for design)
+```
+
+---
+
+## Current Design Theme
+**Aesthetic:** Hacker/cybersecurity with dark mode and neon accents
+- Background: Dark grays (`bg-gray-900`, `bg-gray-800`)
+- Primary accent: Green (`text-green-400`, `bg-green-500`)
+- Secondary accents: Blue, red, yellow for different UI states
+- Typography: Monospace font (`font-mono`) for code/terminal feel
+- General vibe: Professional but playful, retro-futuristic
+
+**Key Design Elements:**
+- Dark theme with good contrast for readability
+- Card-based layout with borders (`border-gray-700`)
+- Hover effects for interactivity
+- Responsive grid layouts (mobile-friendly)
+
+---
+
+## Important Technical Context
+
+### Windows Environment & Terminal Commands
+You are running on a **Windows machine** with PowerShell. Here's what works:
+
+**✅ Working Terminal Syntax:**
+```bash
+# Change directory and run command in one line (PowerShell)
+pushd "C:\full\path\to\jailbreak_agent_game" ; npm run dev
+
+# Or navigate first, then run
+cd C:\full\path\to\jailbreak_agent_game
+npm run dev
+```
+
+**❌ Don't Use (Will Fail):**
+```bash
+# Unix-style chaining doesn't work in PowerShell
+cd path && npm run dev    # ❌ Fails
+cd path & npm run dev     # ❌ Fails
+```
+
+**Essential Commands:**
+```bash
+# Build for production
+npm run build
+
+# Run production server
+npm run start
+
+# Development mode (hot reload)
+npm run dev
+
+# Check for code issues
+npm run lint
+```
+
+### Tailwind CSS Configuration
+- **Version:** v3 (stable, well-documented)
+- **PostCSS Plugin:** Standard `tailwindcss` (NOT `@tailwindcss/postcss`)
+- **Content Scanning:** Already configured correctly in `tailwind.config.js`
+- **Directives in globals.css:** `@tailwind base/components/utilities` are present and working
+
+**Common Tailwind Classes Used:**
+- Layout: `flex`, `grid`, `container`, `mx-auto`, `p-4`, `gap-8`
+- Colors: `bg-gray-900`, `text-white`, `text-green-400`, `border-gray-700`
+- Typography: `font-mono`, `text-xl`, `font-bold`
+- Responsive: `md:grid-cols-2`, `md:grid-cols-3`
+- Interactive: `hover:bg-green-600`, `transition-all`
+
+---
+
+## Design Constraints & Guidelines
+
+### DO:
+✅ Modify Tailwind classes in JSX/TSX files
+✅ Add new utility classes from Tailwind's standard library
+✅ Improve spacing, colors, typography, hover states
+✅ Add animations/transitions (Tailwind has built-in classes)
+✅ Enhance responsive design (mobile/tablet/desktop)
+✅ Improve visual hierarchy and user flow
+✅ Add icons or visual elements (can use emoji or Tailwind icons)
+✅ Test your changes with `npm run build` before finalizing
+
+### DON'T:
+❌ Change backend logic or API endpoints
+❌ Modify placeholder LLM implementations
+❌ Break existing functionality (test before submitting!)
+❌ Add heavy dependencies (keep bundle size reasonable)
+❌ Remove authentication components (even if minimal)
+❌ Change file structure or move files around
+❌ Use inline styles (Tailwind classes only)
+
+---
+
+## Workflow & Testing
+
+### Recommended Workflow:
+1. **Navigate to project:**
+   ```bash
+   cd C:\Users\grego\OneDrive\Documents\BME_UNI_WORK\mesh\LLM_security\code_SECURITY_LLM\rag-system\game
+   ```
+
+2. **Make design changes** to files (start with `pages/index.tsx`)
+
+3. **Test with dev server:**
+   ```bash
+   npm run dev
+   # Visit http://localhost:3000 in browser
+   ```
+
+4. **Verify build:**
+   ```bash
+   npm run build
+   # Should complete with no errors
+   ```
+
+5. **Run production server:**
+   ```bash
+   npm run start
+   # Check http://localhost:3000 for final result
+   ```
+
+6. **Lint check (optional but recommended):**
+   ```bash
+   npm run lint
+   ```
+
+### Common Issues & Solutions:
+- **Port 3000 in use:** Kill node processes: `taskkill /F /IM node.exe`
+- **CSS not updating:** Hard refresh browser (Ctrl+F5) or clear cache
+- **Build errors:** Check syntax and ensure Tailwind classes are valid
+- **TypeScript errors:** Run `npm run lint` to see all issues
+
+---
+
+## Specific Areas for Improvement
+
+### Priority 1: Landing Page (`pages/index.tsx`)
+- Hero section with better visual impact
+- Level cards with more engaging hover effects
+- Better spacing and typography hierarchy
+- Add visual elements (gradients, shadows, borders)
+
+### Priority 2: Game Interface (`pages/play/[level].tsx`)
+- Three-panel layout (left: info, center: chat, right: metrics)
+- Improve chat message styling (better bubbles/cards)
+- File explorer UI polish
+- Button and input styling consistency
+
+### Priority 3: Global Components
+- `components/Auth.tsx` - Better button styling
+- `components/FileSystemExplorer.tsx` - Cleaner file tree
+- Consistent hover states across all interactive elements
+
+### Priority 4: Polish
+- Loading states and transitions
+- Better color contrast for accessibility
+- Responsive design improvements
+- Micro-interactions (button presses, card hovers)
+
+---
+
+## Your Task (Specific Instructions)
+
+<PLACEHOLDER_FOR_DESIGN_IMPROVEMENTS>
+
+read ## UX and UI Specification in webpage.md and implement those
+
+
+use dark mode
+when hovering over buttoms, they should be shaded or highlighted
+in landing page i want a left side tab where i will add many things. for now put:
+- global ranking
+- about
+- contact
+add a "share this game link" buttom which copies the link to user clipboard
+the current "sign in with github" take it out. It should be in the global ranking page
+
+add some retro logos or icons to some sections or to some titles like "attack goal" "tools" "scenario description". in general to stuff like this
+
+the whole thing looks a bit plain and low effort now. i dont want to overcomplicate but add "hacker" or "retro" stuff that will make it cool. the website design must be cool for hackers.
+
+---
+
+## Success Criteria
+1. ✅ All pages render without errors
+2. ✅ `npm run build` completes successfully
+3. ✅ Design is visually improved (better than before)
+4. ✅ No functionality is broken
+5. ✅ Responsive design works on mobile/tablet/desktop
+6. ✅ Code passes `npm run lint` (no new errors)
+
+---
+
+## Final Notes
+- Be creative but maintain the cybersecurity theme
+- Prioritize readability and usability over flashiness
+- Test your changes before marking as complete
+- If you add new Tailwind classes, ensure they're from v3 standard library
+

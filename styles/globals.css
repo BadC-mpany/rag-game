@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global retro / hacker theme accents */
+html, body, #__next { height: 100%; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+
+/* subtle noise / vignette using layers is possible but keep it lightweight */
+.neon-glow {
+	box-shadow: 0 8px 30px rgba(16,185,129,0.06);
+}
+
+/* neon icon helpers */
+.neon { filter: drop-shadow(0 0 6px rgba(99,102,241,0.6)) drop-shadow(0 0 10px rgba(99,102,241,0.35)); }
+.neon-green { filter: drop-shadow(0 0 6px rgba(16,185,129,0.8)) drop-shadow(0 0 10px rgba(16,185,129,0.4)); }
+.neon-yellow { filter: drop-shadow(0 0 6px rgba(234,179,8,0.8)) drop-shadow(0 0 10px rgba(234,179,8,0.35)); }
+.neon-pink { filter: drop-shadow(0 0 6px rgba(236,72,153,0.8)) drop-shadow(0 0 10px rgba(236,72,153,0.35)); }
+
+/* add a tiny retro terminal cursor blink utility */
+.terminal-cursor::after {
+	content: "|";
+	margin-left: 4px;
+	opacity: 0;
+	animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+	0% { opacity: 0 }
+	50% { opacity: 1 }
+	100% { opacity: 0 }
+}

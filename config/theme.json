@@ -1,0 +1,13 @@
+
+{
+  "colors": {
+    "primary": "#00ff99",
+    "background": "#1a1a1a",
+    "text": "#ffffff",
+    "accent": "#00ff99"
+  },
+  "fonts": {
+    "body": "monospace",
+    "heading": "monospace"
+  }
+}
