@@ -75,6 +75,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
     [k: string]: unknown;
   }
   const [stats, setStats] = useState<Stats | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -224,9 +225,11 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   }
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
+    setIsLoading(true);
     const userMessage: Message = { role: 'attacker', content: input };
+    
     // For single-turn levels: restart the conversation by removing previous attacker/assistant messages
     if (level.singleTurn) {
       const preserved = messages.filter(m => m.role !== 'attacker' && m.role !== 'assistant');
@@ -238,36 +241,48 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
     // For multi-turn clear input; for single-turn keep it (user may want to edit their single move)
     if (!level.singleTurn) setInput('');
 
-    const res = await fetch('/api/agent/message', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sessionId,
-        levelId: level.id,
-        message: userMessage,
-        files: committedState,
-  isAdmin: isAdmin,
-        singleTurn: !!level.singleTurn,
-      }),
-    });
+    try {
+      const res = await fetch('/api/agent/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId,
+          levelId: level.id,
+          message: userMessage,
+          files: committedState,
+          isAdmin: isAdmin,
+          singleTurn: !!level.singleTurn,
+        }),
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      const agentMessage: Message = { role: 'assistant', content: data.reply, internalLogs: data.internalLogs };
-      if (level.singleTurn) {
-        // replace attacker/assistant messages with preserved + user + agent
-        const preserved = messages.filter(m => m.role !== 'attacker' && m.role !== 'assistant');
-        setMessages([...preserved, userMessage, agentMessage]);
+      if (res.ok) {
+        const data = await res.json();
+        const agentMessage: Message = { role: 'assistant', content: data.reply, internalLogs: data.internalLogs };
+        if (level.singleTurn) {
+          // replace attacker/assistant messages with preserved + user + agent
+          const preserved = messages.filter(m => m.role !== 'attacker' && m.role !== 'assistant');
+          setMessages([...preserved, userMessage, agentMessage]);
+        } else {
+          setMessages((prev) => [...prev, agentMessage]);
+        }
+        // backend may include inference stats (tokens, latency, etc.) in response
+        if (data.stats) setStats(data.stats);
+        if (data.internalLogs) {
+          setInternalLogs(prev => [...prev, ...data.internalLogs]);
+        }
       } else {
-        setMessages((prev) => [...prev, agentMessage]);
+        // Handle error response
+        const errorMessage: Message = { role: 'assistant', content: 'Error: Failed to get response from agent. Please try again.' };
+        setMessages((prev) => [...prev, errorMessage]);
       }
-      // backend may include inference stats (tokens, latency, etc.) in response
-      if (data.stats) setStats(data.stats);
-      if (data.internalLogs) {
-        setInternalLogs(prev => [...prev, ...data.internalLogs]);
-      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const errorMessage: Message = { role: 'assistant', content: 'Error: Connection failed. Make sure the backend is running.' };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -427,13 +442,19 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
           placeholder="Type your message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+          onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+          disabled={isLoading}
         />
                 <button
-          className="bg-gradient-to-r from-green-500 to-green-400 hover:brightness-110 text-gray-900 font-bold py-2 px-4 rounded-r-md shadow-sm"
+          className={`font-bold py-2 px-4 rounded-r-md shadow-sm transition-all ${
+            isLoading 
+              ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-gray-400 cursor-not-allowed opacity-60' 
+              : 'bg-gradient-to-r from-green-500 to-green-400 hover:brightness-110 text-gray-900'
+          }`}
                   onClick={() => { playClick(); handleSendMessage(); }}
+          disabled={isLoading}
         >
-          ➤ Send
+          {isLoading ? '⏳ Thinking...' : '➤ Send'}
         </button>
                 </div>
             </>

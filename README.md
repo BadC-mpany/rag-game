@@ -1,63 +1,55 @@
-# RAG Security Game
+# BadCompany - Agent Breaker Game
 
-A web-based red-teaming game platform for testing AI agent security vulnerabilities.
+A red-team game where you attempt to exploit LLM agents through prompt injection and social engineering.
 
-## Overview
+## Quick Start
 
-This project contains the design specifications and architecture for a comprehensive red-teaming game that allows security researchers and enthusiasts to test various attack vectors against AI agents in a controlled environment.
+### Prerequisites
+- Node.js 18+
+- Python 3.13+ (for backend)
+- OpenRouter API key
 
-## Game Concept
+### 1. Start the Backend
 
-The platform provides a structured environment where attackers can attempt various prompt injection, privilege escalation, and social engineering attacks against AI agents with different permission levels and capabilities.
+```bash
+cd ../rag-system
+python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn python-dotenv langchain langchain-openai langchain-community chromadb redis sentence-transformers docx2txt
+```
 
-### Key Features
+Create `.env` file in `rag-system`:
+```
+OPENROUTER_API_KEY=your_key_here
+```
 
-- **Multi-level Attack Scenarios**: Various pre-configured scenarios testing different vulnerability types
-- **Role-based Access Control**: Different user roles (public, employee, manager, CEO) with varying permissions
-- **Real-time Interaction**: Live chat interface with AI agents
-- **Scoring System**: Automated evaluation of attack success with detailed metrics
-- **Educational Content**: Clear explanations of attack vectors and defense mechanisms
+Start the server:
+```bash
+uvicorn server:app --reload --port 8000 --host 0.0.0.0
+```
 
-### Planned Attack Scenarios
+### 2. Start the Frontend
 
-1. **Web Search Exploits**: Convince agents to visit attacker-controlled sites
-2. **Document Injection**: Hide malicious prompts in documents for later execution
-3. **Privilege Escalation**: Exploit content injection to gain higher permissions
-4. **Employee Review Manipulation**: Manipulate automated performance evaluations
-5. **Meeting Transcript Attacks**: Inject malicious content into meeting summaries
-6. **Memory Sabotage**: Abuse persistent memory systems
-7. **Alignment Attacks**: Exploit moral reasoning weaknesses
+```bash
+npm install
+echo "PYTHON_BACKEND_URL=http://localhost:8000" >> .env.local
+npm run dev
+```
 
-## Architecture
+### 3. Play
 
-### Frontend Components
-- **Landing Page**: Project description, mission, game links, and global rankings
-- **Left Panel**: Attack setup, goals, agent capabilities, and scenario descriptions
-- **Center Panel**: Primary interaction surface (chat, file explorer, tool triggers)
-- **Right Panel**: Live process summary, statistics, and leaderboards
+Open `http://localhost:3000` and start attacking agents!
 
-### Backend Systems
-- **Agent Framework**: Configurable AI agents with various tool access levels
-- **Sandboxing**: Secure execution environment for potentially malicious inputs
-- **Evaluation Engine**: Automated scoring and attack success detection
-- **User Management**: Authentication and role-based access control
+## Game Structure
 
-## Getting Started
+- **Levels**: 10 different attack scenarios
+- **Roles**: Different access levels (admin, worker, public)
+- **Goals**: Extract secrets, manipulate outputs, exploit tools
+- **Judge**: LLM-based evaluation of your attacks
 
-This repository currently contains the design specifications. Implementation is planned to integrate with the RAG system backend.
+## Configuration
 
-## Contributing
-
-This is an open-source security research project. Contributions are welcome for:
-- New attack scenario designs
-- Security vulnerability research
-- Frontend/backend implementation
-- Documentation improvements
-
-## Security Notice
-
-This platform is designed for educational and research purposes only. All attacks are contained within a sandboxed environment and should not be used against production systems without explicit permission.
-
-## License
-
-MIT License - See LICENSE file for details.
+- `config/levels.json` - Level definitions
+- `config/filesystem.json` - Initial file states per level
+- `config/prompts.json` - Agent and judge prompts
+- `.env.local` - Environment variables
