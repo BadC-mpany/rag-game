@@ -272,9 +272,10 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
     if (!level.singleTurn) setInput('');
 
     try {
-      // Build payload; prepend files only once at the start of the conversation
+      // Build payload; for single-turn levels always prepend files (so repeated submissions include them).
       let payloadMessage = userMessage;
-      if (!filesPrepended && (committedState || []).length > 0) {
+      const shouldAlwaysPrepend = !!level.singleTurn;
+      if ((shouldAlwaysPrepend || !filesPrepended) && (committedState || []).length > 0) {
         // Build a file contents block containing only textual files (filter out likely audio by extension)
         const textFiles = (committedState || []).filter(f => {
           const lower = f.name.toLowerCase();
@@ -289,9 +290,9 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
             fileBlock += `--- ${f.name} ---\n${f.content}\n\n`;
           }
           // Prepend the files block as a separate assistant-like system at the start of the conversation
-          // We attach it to the message.content so the backend receives it at the beginning
           payloadMessage = { ...userMessage, content: `${fileBlock}\nUSER MESSAGE:\n${userMessage.content}` };
-          setFilesPrepended(true);
+          // only mark as prepended for multi-turn flows; for single-turn keep prepending on each submit
+          if (!shouldAlwaysPrepend) setFilesPrepended(true);
         }
       }
 
@@ -602,7 +603,8 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                       // prepare action payload
                       // build payload with one-time file prepend similar to chat
                       let payloadMessage = userMessage;
-                      if (!filesPrepended && (committedState || []).length > 0) {
+                      const shouldAlwaysPrepend = !!level.singleTurn;
+                      if ((shouldAlwaysPrepend || !filesPrepended) && (committedState || []).length > 0) {
                         const textFiles = (committedState || []).filter(f => {
                           const lower = f.name.toLowerCase();
                           const binaryExt = ['.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'];
@@ -614,7 +616,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                             fileBlock += `--- ${f.name} ---\n${f.content}\n\n`;
                           }
                           payloadMessage = { ...userMessage, content: `${fileBlock}\nUSER MESSAGE:\n${userMessage.content}` };
-                          setFilesPrepended(true);
+                          if (!shouldAlwaysPrepend) setFilesPrepended(true);
                         }
                       }
 
