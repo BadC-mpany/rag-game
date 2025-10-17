@@ -28,3 +28,6 @@
 
 # Vercel
 .vercel
+
+.gitignore
+GEMINI.md
