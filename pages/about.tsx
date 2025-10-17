@@ -1,5 +1,5 @@
 import type { NextPage } from 'next';
-import RetroLogo from '../components/RetroLogo';
+import Image from 'next/image';
 import Sidebar from '../components/Sidebar';
 
 const About: NextPage = () => {
@@ -10,7 +10,7 @@ const About: NextPage = () => {
           <Sidebar />
           <main className="flex-1 max-w-4xl mx-auto bg-gray-800 p-8 rounded-lg border border-gray-700">
             <div className="flex items-center gap-6">
-              <RetroLogo size={80} />
+              <Image src="/badcompany_logo1.jpg" alt="BadCompany Logo" width={80} height={80} className="rounded" />
               <div>
                 <h1 className="text-3xl font-bold text-green-400">About badcompany</h1>
                 <p className="text-gray-400 mt-2">A retro-themed red-team game to help researchers and enthusiasts find prompt-injection and social engineering flaws in LLM-based agents.</p>

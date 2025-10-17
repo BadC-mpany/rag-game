@@ -1,36 +1,59 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Placeholder agent endpoint
-// NOTE: This is an explicit, deterministic placeholder implementation.
-// It does NOT call any LLMs or external agent systems. Replace the body
-// of the POST handler with a real agent call when ready.
-export default function handler(
+const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
+
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   const method = req.method;
 
   if (method === 'POST') {
-    const { message, isAdmin } = req.body;
+    const { sessionId, levelId, message, files, isAdmin, singleTurn } = req.body;
 
-    // Minimal admin-style internal logs to help frontend debugging.
-    const internalLogs: string[] = [];
-    if (isAdmin) {
-      internalLogs.push('Admin mode enabled (placeholder agent).');
-      internalLogs.push(`Received message: "${message?.content ?? ''}"`);
+    try {
+      const response = await fetch(`${PYTHON_BACKEND_URL}/agent/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId,
+          levelId,
+          message,
+          files: files || [],
+          isAdmin: isAdmin || false,
+          singleTurn: singleTurn || false,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        console.error('Python backend error:', errorData);
+        
+        return res.status(response.status).json({
+          reply: `Error: ${errorData.detail || 'Failed to connect to agent backend'}`,
+          tokensUsed: { prompt: 0, completion: 0 },
+          toolCalls: [],
+          stats: { inferenceMs: 0 },
+          internalLogs: isAdmin ? [`Backend error: ${errorData.detail}`] : undefined,
+        });
+      }
+
+      const data = await response.json();
+      return res.status(200).json(data);
+      
+    } catch (error) {
+      console.error('Error calling Python backend:', error);
+      
+      return res.status(500).json({
+        reply: 'Error: Failed to connect to the agent backend. Make sure the Python server is running.',
+        tokensUsed: { prompt: 0, completion: 0 },
+        toolCalls: [],
+        stats: { inferenceMs: 0 },
+        internalLogs: isAdmin ? [`Connection error: ${error instanceof Error ? error.message : String(error)}`] : undefined,
+      });
     }
-
-    // Deterministic, constant reply so the frontend is functional without any LLM.
-    const reply = 'Placeholder agent response: this is a deterministic stub and does not perform any model inference.';
-
-    return res.status(200).json({
-      reply,
-      // Static, small fake token counts to show metrics in the UI.
-      tokensUsed: { prompt: 5, completion: 10 },
-      toolCalls: [],
-      stats: { inferenceMs: 5 },
-      internalLogs: isAdmin ? internalLogs : undefined,
-    });
   }
 
   res.setHeader('Allow', ['POST']);

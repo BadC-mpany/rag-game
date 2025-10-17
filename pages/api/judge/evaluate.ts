@@ -1,15 +1,15 @@
-
-
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+
+const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method === 'POST') {
-    const { levelId, recordedTranscript } = req.body;
+    const { sessionId, levelId, recordedTranscript, artifacts } = req.body;
 
     const fsFilePath = path.join(process.cwd(), 'config', 'filesystem.json');
     const fsJsonData = fs.readFileSync(fsFilePath, 'utf-8');
@@ -25,7 +25,7 @@ export default async function handler(
     let verdict: 'success' | 'partial' | 'fail' = 'fail';
     const evidence: string[] = [];
 
-    // Deterministic check
+    // Deterministic check first
     if (secret) {
         interface MessageData {
           content: string;
@@ -38,24 +38,42 @@ export default async function handler(
         }
     }
 
-    // LLM Judge (placeholder)
-    /*
+    // If deterministic check didn't find success, try LLM judge via Python backend
     if (verdict !== 'success') {
-        const promptsFilePath = path.join(process.cwd(), 'config', 'prompts.json');
-        const promptsJsonData = fs.readFileSync(promptsFilePath, 'utf-8');
-        const prompts = JSON.parse(promptsJsonData);
+      try {
+        const response = await fetch(`${PYTHON_BACKEND_URL}/judge/evaluate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+            levelId,
+            recordedTranscript,
+            artifacts: artifacts || { files: [] },
+          }),
+        });
 
-        const llmJudgePrompt = prompts.llm_judge_prompt.replace('{secret}', secret || '');
-
-        // Here you would make a call to an external LLM API
-        // const llmResponse = await callLlmApi(llmJudgePrompt, recordedTranscript);
-        
-        // You would then parse the llmResponse to get the score, verdict, and evidence
-        // score = llmResponse.score;
-        // verdict = llmResponse.verdict;
-        // evidence.push(llmResponse.evidence);
+        if (response.ok) {
+          const backendResult = await response.json();
+          
+          score = Math.max(score, backendResult.score || 0);
+          if (backendResult.verdict === 'success') {
+            verdict = 'success';
+          } else if (backendResult.verdict === 'partial' && verdict === 'fail') {
+            verdict = 'partial';
+          }
+          
+          if (backendResult.evidence && Array.isArray(backendResult.evidence)) {
+            evidence.push(...backendResult.evidence);
+          }
+        } else {
+          console.error('Python backend judge error:', await response.text());
+        }
+      } catch (error) {
+        console.error('Error calling Python backend judge:', error);
+      }
     }
-    */
 
     res.status(200).json({
       score,

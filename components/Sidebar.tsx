@@ -1,6 +1,6 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import RetroLogo from './RetroLogo';
 import { FaShareAlt } from 'react-icons/fa';
 import ShareModal from './ShareModal';
 import { playClick } from '../lib/sound';
@@ -26,7 +26,7 @@ export default function Sidebar() {
     <aside className={`w-64 bg-gray-800 bg-opacity-40 backdrop-blur-md p-4 rounded-lg border border-gray-700 flex-col hidden md:flex ${sidebarOpen ? '' : 'hidden'}`}>
       <div className="mb-6">
         <div className="flex items-center space-x-3">
-          <RetroLogo size={44} />
+          <Image src="/badcompany_logo1.jpg" alt="BadCompany Logo" width={44} height={44} className="rounded" />
           <div>
             <h1 className="text-2xl font-bold text-green-400">badcompany</h1>
             <p className="text-xs text-gray-400">Hone your red-team skills</p>

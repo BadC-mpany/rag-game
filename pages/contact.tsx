@@ -1,5 +1,5 @@
 import type { NextPage } from 'next';
-import RetroLogo from '../components/RetroLogo';
+import Image from 'next/image';
 import Sidebar from '../components/Sidebar';
 
 const Contact: NextPage = () => {
@@ -10,7 +10,7 @@ const Contact: NextPage = () => {
           <Sidebar />
           <div className="flex-1 max-w-3xl mx-auto bg-gray-800 p-8 rounded-lg border border-gray-700">
             <div className="flex items-center gap-4">
-              <RetroLogo size={56} />
+              <Image src="/badcompany_logo1.jpg" alt="BadCompany Logo" width={56} height={56} className="rounded" />
               <h1 className="text-2xl font-bold text-green-400">Contact</h1>
             </div>
 
