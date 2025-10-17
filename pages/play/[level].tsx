@@ -21,6 +21,7 @@ interface Message {
 interface FileData {
     name: string;
     content: string;
+    editable?: boolean;
 }
 
 interface Level {
@@ -178,7 +179,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   }
 
   const handleCreateNewFile = (name: string) => {
-    const newFile: FileData = { name, content: '' };
+    const newFile: FileData = { name, content: '', editable: true };
     setLevel(prev => ({ ...prev, files: [...(prev.files || []), newFile] }));
     setSelectedFile(newFile);
     setEditingContent('');
@@ -195,7 +196,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   }
 
   const handleSaveFile = () => {
-    if (!selectedFile) return;
+    if (!selectedFile || selectedFile.editable === false) return;
 
     const updatedFiles = level.files.map(f => 
       f.name === selectedFile.name ? { ...f, content: editingContent } : f
@@ -562,15 +563,21 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                             <h3 className="text-lg font-bold text-green-400 mb-4">{selectedFile.name}</h3>
               <textarea 
                 ref={editorRef}
-                className="flex-grow bg-gray-900 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+                className={`flex-grow bg-gray-900 text-white p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 ${
+                  selectedFile?.editable === false ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
                 value={editingContent}
                 onChange={(e) => {
+                  if (selectedFile?.editable === false) return;
                   setEditingContent(e.target.value);
                   setHasUnsavedChanges(true);
                 }}
+                readOnly={selectedFile?.editable === false}
               />
                             <div className="mt-4">
-                                <button onClick={() => { playClick(); handleSaveFile(); }} className="bg-green-500 hover:bg-green-600 text-gray-900 font-bold py-2 px-4 rounded mr-2">Save</button>
+                                <button onClick={() => { playClick(); handleSaveFile(); }} disabled={selectedFile?.editable === false} className={`bg-green-500 hover:bg-green-600 text-gray-900 font-bold py-2 px-4 rounded mr-2 ${
+                                  selectedFile?.editable === false ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}>Save</button>
                                 <button onClick={() => { playClick(); handleCommit(); }} disabled={!hasUnsavedChanges} className={`font-bold py-2 px-4 rounded ${hasUnsavedChanges ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}`}>Commit</button>
                             </div>
                         </>

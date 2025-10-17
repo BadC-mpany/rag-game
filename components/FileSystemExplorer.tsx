@@ -1,12 +1,13 @@
 
 import React, { useMemo, useState, useRef } from 'react';
-import { FiFileText, FiMic, FiSquare } from 'react-icons/fi';
+import { FiFileText, FiMic, FiSquare, FiLock } from 'react-icons/fi';
 import { lineDiff, DiffOp } from '../lib/diff';
 import { startRecording } from '../lib/transcriber';
 
 interface File {
     name: string;
     content: string;
+    editable?: boolean;
 }
 
 interface FileSystemExplorerProps {
@@ -136,6 +137,7 @@ const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committe
                     const transcriptionFile = {
                         name: 'audio_transcription.txt',
                         content: finalTranscript.trim(),
+                        editable: true,
                     };
                     
                     // If file exists, we need to delete it first (or update it)
@@ -184,8 +186,8 @@ const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committe
                     <li key={file.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2 w-full">
                             <button onClick={() => onFileSelect(file)} className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 hover:text-green-300 transition-all flex items-center gap-3">
-                                <FiFileText className="text-gray-400 neon" />
-                                <span className="truncate">{file.name}</span>
+                                {file.editable === false ? <FiLock className="text-gray-500" /> : <FiFileText className="text-gray-400 neon" />}
+                                <span className={`truncate ${file.editable === false ? 'text-gray-500' : ''}`}>{file.name}</span>
                             </button>
                             {status && (
                                 <div className={`ml-2 px-2 py-1 rounded text-xs ${status === 'U' ? 'bg-green-700 text-green-100' : 'bg-yellow-700 text-yellow-100'}`} title={status === 'U' ? 'Untracked' : 'Modified'}>{status}</div>
@@ -193,7 +195,7 @@ const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committe
                         </div>
                         <div className="flex items-center gap-2">
                             <button onClick={() => openDiff(file)} className="text-xs text-gray-300 hover:text-white">Diff</button>
-                            {onDelete && (
+                            {onDelete && file.editable !== false && (
                                 <button onClick={() => onDelete(file.name)} className="ml-2 text-xs text-red-400 hover:text-red-300">Delete</button>
                             )}
                         </div>
@@ -245,7 +247,7 @@ const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committe
                             const reader = new FileReader();
                             reader.onload = () => {
                                 const text = reader.result as string;
-                                onUpload({ name: f.name, content: text });
+                                onUpload({ name: f.name, content: text, editable: true });
                             };
                             reader.readAsText(f);
                         }} />
