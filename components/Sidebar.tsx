@@ -4,23 +4,27 @@ import { useEffect, useState } from 'react';
 import { FaShareAlt } from 'react-icons/fa';
 import ShareModal from './ShareModal';
 import { playClick } from '../lib/sound';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar() {
-  const { data: session } = useSession();
+  const { user, signOut } = useAuth();
   const [shareOpen, setShareOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [totalScore, setTotalScore] = useState<number>(0);
-  const [signupOpen, setSignupOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const rawScores = localStorage.getItem('levelScores');
-      const scores = rawScores ? JSON.parse(rawScores) : {};
-      const total = (Object.values(scores) as number[]).reduce((a: number, b: number) => a + (b || 0), 0);
-      setTotalScore(total);
-    } catch { }
-  }, []);
+    if (user?.user_metadata?.total_score !== undefined) {
+      setTotalScore(user.user_metadata.total_score);
+    } else {
+      // Fallback to localStorage for existing users
+      try {
+        const rawScores = localStorage.getItem('levelScores');
+        const scores = rawScores ? JSON.parse(rawScores) : {};
+        const total = (Object.values(scores) as number[]).reduce((a: number, b: number) => a + (b || 0), 0);
+        setTotalScore(total);
+      } catch { }
+    }
+  }, [user]);
 
   return (
     <aside className={`w-64 bg-gray-800 bg-opacity-40 backdrop-blur-md p-4 rounded-lg border border-gray-700 flex-col hidden md:flex ${sidebarOpen ? '' : 'hidden'}`}>
@@ -48,22 +52,14 @@ export default function Sidebar() {
 
       <div className="mt-auto pt-4">
         <div className="flex flex-col gap-2">
-          {session ? (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-300">Signed in as</div>
-              <div className="px-3 py-1 bg-gray-900 border border-gray-700 rounded text-sm">{session.user?.name ?? session.user?.email}</div>
+          {user ? (
+            <div className="px-3 py-2 bg-gray-900 border border-gray-700 rounded text-center">
+              <div className="text-sm font-semibold text-green-400">
+                {user.user_metadata?.display_name || user.email?.split('@')[0] || 'Player'}
+              </div>
+              <div className="text-xs text-gray-400">Level {user.user_metadata?.current_level || 1}</div>
             </div>
-          ) : (
-            <div>
-              <button onClick={() => setSignupOpen(s => !s)} className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold py-2 px-3 rounded hover:brightness-105">Sign up</button>
-              {signupOpen && (
-                <div className="mt-2 flex flex-col gap-2">
-                  <button onClick={() => signIn('github')} className="text-sm px-2 py-1 bg-gray-700 rounded">Sign up with GitHub</button>
-                  <button onClick={() => signIn('google')} className="text-sm px-2 py-1 bg-gray-700 rounded">Sign up with Google</button>
-                </div>
-              )}
-            </div>
-          )}
+          ) : null}
 
           <div className="flex items-center gap-2 mt-3">
             <button onClick={() => { playClick(); setShareOpen(!shareOpen); }} className="flex-1 w-full bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-3 rounded hover:brightness-110 transition-all inline-flex items-center gap-2">
@@ -73,7 +69,7 @@ export default function Sidebar() {
             <button onClick={() => setSidebarOpen(false)} title="Collapse sidebar" className="bg-gray-700 text-gray-200 p-2 rounded hover:bg-gray-600">✕</button>
           </div>
           <ShareModal open={shareOpen} onClose={() => { playClick(); setShareOpen(false); }} />
-          {session && (
+          {user && (
             <div className="mt-3">
               <button onClick={() => signOut()} className="w-full text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded">Sign out</button>
             </div>

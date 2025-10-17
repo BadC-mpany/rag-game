@@ -4,9 +4,10 @@ import Link from 'next/link';
 import fs from 'fs';
 import path from 'path';
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '../contexts/AuthContext';
 // RetroLogo is provided in the shared Sidebar; remove local import
 import Sidebar from '../components/Sidebar';
+import Auth from '../components/Auth';
 import { playClick } from '../lib/sound';
 import { FiAlertCircle } from 'react-icons/fi';
 import { getAdminMode, setAdminMode } from '../lib/admin';
@@ -46,7 +47,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
       return rawScores ? JSON.parse(rawScores) : {};
     } catch { return {}; }
   });
-  const { data: session } = useSession();
+  const { user } = useAuth();
 
   // Hydration flag: avoid rendering level availability on the server to prevent
   // flicker/hydration mismatch with client-localStorage-derived state.
@@ -58,7 +59,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   // Fetch server progress when user is signed in and merge into localStorage
   useEffect(() => {
     const fetchProgress = async () => {
-      if (!session) return;
+      if (!user) return;
       try {
         const res = await fetch('/api/progress');
         if (res.ok) {
@@ -87,7 +88,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
       }
     }
     fetchProgress();
-  }, [session]);
+  }, [user]);
 
   // note: level completion is handled by the judge flow in play/[level].tsx
 
@@ -117,7 +118,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                 <h2 className="text-4xl font-bold text-green-400">Retro hacking playground</h2>
                 <p className="text-sm text-gray-400 mt-1">A game to hack LLM agents and improve AI security.</p>
               </div>
-              {/* <div className="hidden md:block text-sm text-gray-400">Play responsibly — for education only</div> */}
+              <Auth />
             </header>
 
             <section>

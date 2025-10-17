@@ -8,7 +8,8 @@ import fs from 'fs';
 import path from 'path';
 import FileSystemExplorer from '../../components/FileSystemExplorer';
 import { lineDiff, formatUnifiedDiff } from '../../lib/diff';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '../../contexts/AuthContext';
+import { updateUserProgress } from '../../lib/userProgress';
 import { getAdminMode } from '../../lib/admin';
 
 interface Message {
@@ -51,7 +52,7 @@ interface LevelPageProps {
 
 const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', title: '', description: '', goal: '', files: [] }, gameConfig: initialGameConfig }) => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user, session } = useAuth();
   const [level, setLevel] = useState(initialLevel);
   const [gameCfg] = useState<GameConfig>(initialGameConfig || { agent_system_description: 'The agent is a sandboxed assistant that can read provided files, summarize content, and call a small set of simulated tools when enabled by the level.', tools: [] });
   // Initialize admin mode synchronously from localStorage to avoid render-time
@@ -249,6 +250,12 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
+    // Check if user is authenticated
+    if (!user) {
+      alert('You must sign in to send messages to the agent. Please sign in to continue.');
+      return;
+    }
+
     setIsLoading(true);
     const userMessage: Message = { role: 'attacker', content: input };
     
@@ -335,6 +342,12 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   }
 
   const handleJudge = async () => {
+    // Check if user is authenticated
+    if (!user) {
+      alert('You must sign in to submit your solution for judging. Please sign in to continue.');
+      return;
+    }
+
     const res = await fetch('/api/judge/evaluate', {
         method: 'POST',
         headers: {
@@ -351,50 +364,70 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
     if (res.ok) {
         const result = await res.json();
         const submitMessage = `Judging complete!\nScore: ${result.score}\nVerdict: ${result.verdict}`;
-    // store per-level score locally
-    try {
-      const rawScores = localStorage.getItem('levelScores');
-      const scores = rawScores ? JSON.parse(rawScores) : {};
-      scores[level.id] = Math.max(scores[level.id] || 0, result.score);
-      localStorage.setItem('levelScores', JSON.stringify(scores));
-    } catch {}
+        
+        // store per-level score locally
+        try {
+          const rawScores = localStorage.getItem('levelScores');
+          const scores = rawScores ? JSON.parse(rawScores) : {};
+          scores[level.id] = Math.max(scores[level.id] || 0, result.score);
+          localStorage.setItem('levelScores', JSON.stringify(scores));
+        } catch (error) {
+          console.error('Failed to store score:', error);
+        }
 
-    if (session) {
-      // auto-submit to global leaderboard if signed in
-      handleSubmitToLeaderboard(result.score);
-    } else {
-      alert(`${submitMessage}\n\nSign in to submit your score to the leaderboard.`);
-    }
+        if (user) {
+          // auto-submit to global leaderboard if signed in
+          handleSubmitToLeaderboard(result.score);
+        } else {
+          alert(`${submitMessage}\n\nSign in to submit your score to the leaderboard.`);
+        }
+        
         // If judged successful, mark level complete so next level unlocks (client-side)
         if (result.verdict === 'success') {
-          try {
-            const raw = localStorage.getItem('completedLevels');
-            const arr = raw ? JSON.parse(raw) : [];
-            if (!arr.includes(level.id)) {
-              arr.push(level.id);
-              localStorage.setItem('completedLevels', JSON.stringify(arr));
+          const isNewCompletion = (() => {
+            try {
+              const raw = localStorage.getItem('completedLevels');
+              const arr = raw ? JSON.parse(raw) : [];
+              const wasAlreadyCompleted = arr.includes(level.id);
+              if (!wasAlreadyCompleted) {
+                arr.push(level.id);
+                localStorage.setItem('completedLevels', JSON.stringify(arr));
+              }
+              return !wasAlreadyCompleted;
+            } catch {
+              return false;
             }
-          } catch {}
-              // Also post progress to server so it's persisted
-              try {
-                const rawScores = localStorage.getItem('levelScores');
-                const scores = rawScores ? JSON.parse(rawScores) : {};
-                const rawCompleted = localStorage.getItem('completedLevels');
-                const completed = rawCompleted ? JSON.parse(rawCompleted) : [];
-                if (session) {
-                  await fetch('/api/progress', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ completedLevels: completed, levelScores: scores }),
-                  });
-                }
-      } catch { }
+          })();
+
+          // Update user progress in Supabase if authenticated and it's a new completion
+          if (user && isNewCompletion) {
+            updateUserProgress(result.score, true).catch(console.error);
+          }
+          
+          // Also post progress to server so it's persisted
+          try {
+            const rawScores = localStorage.getItem('levelScores');
+            const scores = rawScores ? JSON.parse(rawScores) : {};
+            const rawCompleted = localStorage.getItem('completedLevels');
+            const completed = rawCompleted ? JSON.parse(rawCompleted) : [];
+            if (user) {
+              await fetch('/api/progress', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completedLevels: completed, levelScores: scores }),
+              });
+            }
+          } catch (error) {
+            console.error('Failed to post progress:', error);
+          }
         }
+    } else {
+        alert('Failed to evaluate attack.');
     }
   }
 
   if (router.isFallback) {
-    return <div>Loading...</div>
+    return <div>Loading...</div>;
   }
 
   return (
@@ -461,22 +494,22 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
         <input
           type="text"
           className="flex-1 bg-gray-800 rounded-l-md p-2 focus:outline-none text-white focus:ring-2 focus:ring-green-400 border border-gray-700"
-          placeholder="Type your message..."
+          placeholder={!user ? "Sign in to send messages..." : "Type your message..."}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-          disabled={isLoading}
+          onKeyPress={(e) => e.key === 'Enter' && !isLoading && user && handleSendMessage()}
+          disabled={isLoading || !user}
         />
                 <button
           className={`font-bold py-2 px-4 rounded-r-md shadow-sm transition-all ${
-            isLoading 
+            isLoading || !user
               ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-gray-400 cursor-not-allowed opacity-60' 
               : 'bg-gradient-to-r from-green-500 to-green-400 hover:brightness-110 text-gray-900'
           }`}
                   onClick={() => { playClick(); handleSendMessage(); }}
-          disabled={isLoading}
+          disabled={isLoading || !user}
         >
-          {isLoading ? '⏳ Thinking...' : '➤ Send'}
+          {isLoading ? '⏳ Thinking...' : !user ? '🔒 Sign in to chat' : '➤ Send'}
         </button>
                 </div>
             </>
@@ -577,7 +610,17 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                   </div>
                 )}
         <div className="mt-8">
-            <button onClick={handleJudge} className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded">Submit for Judging</button>
+            <button 
+              onClick={handleJudge} 
+              disabled={!user}
+              className={`w-full font-bold py-2 px-4 rounded transition-all ${
+                !user 
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-60' 
+                  : 'bg-yellow-500 hover:bg-yellow-600 text-gray-900'
+              }`}
+            >
+              {!user ? '🔒 Sign in to submit' : 'Submit for Judging'}
+            </button>
         </div>
         {isAdmin && (
             <div className="mt-8">

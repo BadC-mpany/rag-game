@@ -1,29 +1,246 @@
 
-import { useSession, signIn, signOut } from "next-auth/react"
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Auth() {
-  const { data: session } = useSession()
+  const { user, signOut, loading } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  if (session) {
+  if (loading) {
+    return (
+      <div className="flex items-center space-x-3">
+        <div className="text-sm text-gray-300">Loading...</div>
+      </div>
+    );
+  }
+
+  if (user) {
     return (
       <div className="flex items-center space-x-3">
         <div className="text-sm text-gray-300">Signed in as</div>
-        <div className="px-3 py-1 bg-gray-800 border border-gray-700 rounded text-sm">{session.user?.name ?? session.user?.email}</div>
-        <button onClick={() => signOut()} className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded transition-all shadow-sm">
+        <div className="px-3 py-1 bg-gray-800 border border-gray-700 rounded text-sm">
+          {user.email}
+        </div>
+        <button 
+          onClick={() => signOut()} 
+          className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded transition-all shadow-sm"
+        >
           Sign out
         </button>
       </div>
-    )
+    );
   }
+
   return (
-    <div className="flex items-center gap-2">
-      <button onClick={() => signIn('github')} className="inline-flex items-center gap-2 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white font-semibold py-2 px-3 rounded transition-all shadow-[0_4px_10px_rgba(0,0,0,0.5)]">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.483 0-.237-.009-.866-.014-1.699-2.782.605-3.369-1.341-3.369-1.341-.455-1.157-1.11-1.465-1.11-1.465-.908-.62.069-.607.069-.607 1.004.071 1.532 1.033 1.532 1.033.893 1.53 2.341 1.088 2.91.833.091-.647.35-1.088.636-1.339-2.22-.252-4.555-1.11-4.555-4.944 0-1.09.39-1.98 1.03-2.678-.103-.253-.447-1.27.098-2.646 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.748-1.025 2.748-1.025.546 1.376.202 2.393.1 2.646.64.698 1.028 1.588 1.028 2.678 0 3.842-2.337 4.688-4.565 4.935.36.309.68.919.68 1.852 0 1.337-.012 2.419-.012 2.748 0 .268.18.58.688.482A10.003 10.003 0 0022 12c0-5.523-4.477-10-10-10z" fill="#fff"/></svg>
-        GitHub
-      </button>
-      <button onClick={() => signIn('google')} className="inline-flex items-center gap-2 bg-white text-gray-900 font-semibold py-2 px-3 rounded transition-all shadow-sm">
-        Google
-      </button>
+    <>
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={() => setShowAuthModal(true)}
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-3 rounded transition-all shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+        >
+          Sign In
+        </button>
+      </div>
+      
+      {showAuthModal && (
+        <AuthModal onClose={() => setShowAuthModal(false)} />
+      )}
+    </>
+  );
+}
+
+function AuthModal({ onClose }: { onClose: () => void }) {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  
+  const { signIn, signUp, resetPassword } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    if (isSignUp && password !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
+    if (isSignUp && !displayName.trim()) {
+      setError('Display name is required');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password, displayName.trim());
+        if (error) {
+          setError(error.message);
+        } else {
+          setMessage('Check your email for a confirmation link!');
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          setError(error.message);
+        } else {
+          onClose();
+        }
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+    }
+    
+    setLoading(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+    
+    setLoading(true);
+    const { error } = await resetPassword(email);
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage('Check your email for a password reset link!');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-green-400">
+            {isSignUp ? 'Sign Up' : 'Sign In'}
+          </h2>
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {isSignUp && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Display Name
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-green-500"
+                placeholder="How others will see you"
+                required
+              />
+            </div>
+          )}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-green-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-green-500"
+              required
+              minLength={6}
+            />
+          </div>
+
+          {isSignUp && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:border-green-500"
+                required
+                minLength={6}
+              />
+            </div>
+          )}
+
+          {error && (
+            <div className="text-red-400 text-sm">{error}</div>
+          )}
+
+          {message && (
+            <div className="text-green-400 text-sm">{message}</div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-4 rounded transition-all disabled:opacity-50"
+          >
+            {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+          </button>
+        </form>
+
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError('');
+              setMessage('');
+              setDisplayName('');
+            }}
+            className="text-green-400 hover:text-green-300 text-sm"
+          >
+            {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
+          </button>
+        </div>
+
+        {!isSignUp && (
+          <div className="mt-2 text-center">
+            <button
+              onClick={handleResetPassword}
+              className="text-gray-400 hover:text-gray-300 text-sm"
+            >
+              Forgot your password?
+            </button>
+          </div>
+        )}
+      </div>
     </div>
-  )
+  );
 }
