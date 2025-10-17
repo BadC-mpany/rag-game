@@ -1,7 +1,8 @@
 
-import React, { useMemo, useState } from 'react';
-import { FiFileText } from 'react-icons/fi';
+import React, { useMemo, useState, useRef } from 'react';
+import { FiFileText, FiMic, FiSquare } from 'react-icons/fi';
 import { lineDiff, DiffOp } from '../lib/diff';
+import { startRecording } from '../lib/transcriber';
 
 interface File {
     name: string;
@@ -10,7 +11,7 @@ interface File {
 
 interface FileSystemExplorerProps {
     files: File[];
-    committedFiles?: File[]; // previous committed state to compute status/diffs
+    committedFiles?: File[];
     onFileSelect: (file: File) => void;
     allowsFiles?: boolean;
     onUpload?: (file: File) => void;
@@ -18,12 +19,19 @@ interface FileSystemExplorerProps {
     showUpload?: boolean;
     showMakeNewFile?: boolean;
     onCreateNewFile?: (name: string) => void;
+    levelId?: string;
+    onCommit?: () => void;
+    onUploadAndCommit?: (file: File) => void;
 }
 
-const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committedFiles = [], onFileSelect, allowsFiles = true, onUpload, onDelete, showUpload = true, showMakeNewFile = false, onCreateNewFile }) => {
+const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committedFiles = [], onFileSelect, allowsFiles = true, onUpload, onDelete, showUpload = true, showMakeNewFile = false, onCreateNewFile, levelId, onCommit, onUploadAndCommit }) => {
     const [diffOpen, setDiffOpen] = useState(false);
     const [diffOps, setDiffOps] = useState<DiffOp[]>([]);
     const [diffTitle, setDiffTitle] = useState('');
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTranscript, setRecordingTranscript] = useState('');
+    const [recordingControl, setRecordingControl] = useState<{ stop: () => void } | null>(null);
+    const fullTranscriptRef = useRef<string>('');
 
     const committedMap = useMemo(() => {
         const m: Record<string, string> = {};
@@ -76,11 +84,92 @@ const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committe
 
     const openDiff = (file: File) => {
         const prev = committedMap[file.name] ?? '';
-    const ops = lineDiff(prev, file.content);
-    setDiffOps(ops);
+        const ops = lineDiff(prev, file.content);
+        setDiffOps(ops);
         setDiffTitle(file.name);
         setDiffOpen(true);
     }
+
+    const handleStartRecording = () => {
+        // Check if audio_transcription.txt already exists
+        const existingFile = files.find(f => f.name === 'audio_transcription.txt');
+        if (existingFile) {
+            const confirmed = window.confirm(
+                'A file named "audio_transcription.txt" already exists. Recording will overwrite it. Continue?'
+            );
+            if (!confirmed) {
+                return;
+            }
+        }
+
+        fullTranscriptRef.current = '';
+        setRecordingTranscript('');
+        setIsRecording(true);
+
+        const control = startRecording(
+            (text, isFinal) => {
+                if (isFinal) {
+                    fullTranscriptRef.current = (fullTranscriptRef.current + ' ' + text).trim();
+                    setRecordingTranscript(fullTranscriptRef.current);
+                }
+            },
+            (error) => {
+                alert(error);
+                setIsRecording(false);
+                setRecordingControl(null);
+            }
+        );
+
+        setRecordingControl(control);
+    };
+
+    const handleStopRecording = () => {
+        if (recordingControl) {
+            recordingControl.stop();
+            
+            // Small delay to allow final results to come through
+            setTimeout(() => {
+                const finalTranscript = fullTranscriptRef.current;
+                
+                // Create transcription file
+                if (finalTranscript.trim()) {
+                    const transcriptionFile = {
+                        name: 'audio_transcription.txt',
+                        content: finalTranscript.trim(),
+                    };
+                    
+                    // If file exists, we need to delete it first (or update it)
+                    const existingFile = files.find(f => f.name === 'audio_transcription.txt');
+                    if (existingFile && onDelete) {
+                        onDelete('audio_transcription.txt');
+                    }
+                    
+                    // Use the combined upload-and-commit handler to ensure proper state management
+                    if (onUploadAndCommit) {
+                        onUploadAndCommit(transcriptionFile);
+                        fullTranscriptRef.current = '';
+                        setRecordingTranscript('');
+                        // Alert is shown by handleCommit in parent
+                        setTimeout(() => {
+                            alert('Transcription saved and committed as audio_transcription.txt');
+                        }, 100);
+                    } else if (onUpload) {
+                        // Fallback to old behavior if onUploadAndCommit not provided
+                        onUpload(transcriptionFile);
+                        fullTranscriptRef.current = '';
+                        setRecordingTranscript('');
+                        alert('Transcription saved as audio_transcription.txt');
+                    }
+                } else {
+                    alert(`No speech detected. Please try again.`);
+                }
+                
+                setRecordingControl(null);
+            }, 500); // Wait 500ms for final results
+        }
+        
+        setIsRecording(false);
+    };
 
     return (
         <div className="bg-gray-800 p-4 rounded-lg h-full border border-gray-700">
@@ -113,12 +202,46 @@ const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committe
                 })}
             </ul>
             <div className="mt-3 flex flex-col gap-2">
+                {/* Audio Recording Button for level-007 */}
+                {levelId === 'level-007' && onUpload && (
+                    <div className="bg-gray-900 p-3 rounded border border-gray-700">
+                        <div className="flex items-center gap-2 mb-2">
+                            {!isRecording ? (
+                                <button 
+                                    onClick={handleStartRecording}
+                                    className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded text-sm font-semibold"
+                                >
+                                    <FiMic /> Start Recording
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={handleStopRecording}
+                                    className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded text-sm font-semibold animate-pulse"
+                                >
+                                    <FiSquare /> Stop Recording
+                                </button>
+                            )}
+                        </div>
+                        {isRecording && (
+                            <div className="text-xs text-gray-400 mt-2">
+                                <div className="mb-1">🎤 Recording... Speak now</div>
+                                {recordingTranscript && (
+                                    <div className="bg-gray-800 p-2 rounded text-green-300 max-h-20 overflow-y-auto">
+                                        {recordingTranscript}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {allowsFiles && onUpload && showUpload && (
                     <label className="inline-block bg-gray-700 hover:bg-gray-600 py-2 px-3 rounded cursor-pointer text-sm">
                         Upload file
                         <input type="file" className="hidden" onChange={(e) => {
                             const f = e.target.files?.[0];
-                            if (!f) return;
+                            if (!f || !onUpload) return;
+
                             const reader = new FileReader();
                             reader.onload = () => {
                                 const text = reader.result as string;

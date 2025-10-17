@@ -31,3 +31,4 @@
 
 .gitignore
 GEMINI.md
+.env

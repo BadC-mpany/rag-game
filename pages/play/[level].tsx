@@ -149,8 +149,30 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   }
 
   const handleUploadFile = (file: FileData) => {
-    // Add file to current working files. Don't mark as committed — it's a new untracked file until commit.
-    setLevel(prev => ({ ...prev, files: [...(prev.files || []), file] }));
+    setLevel(prev => ({
+      ...prev,
+      files: [...(prev.files || []), file]
+    }));
+  }
+
+  const handleUploadAndCommit = (file: FileData) => {
+    // Update level.files state
+    setLevel(prev => {
+      const newFiles = [...(prev.files || []), file];
+      
+      // Use setTimeout to ensure state update completes before commit
+      // This schedules the commit for the next tick after React finishes the state update
+      setTimeout(() => {
+        // At this point, level.files has been updated in the component state
+        // Now we can safely commit
+        handleCommit();
+      }, 0);
+      
+      return {
+        ...prev,
+        files: newFiles
+      };
+    });
   }
 
   const handleCreateNewFile = (name: string) => {
@@ -471,6 +493,9 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
             showUpload={!!level.upload_files}
             showMakeNewFile={!!level.make_new_file}
             onCreateNewFile={handleCreateNewFile}
+            levelId={level.id}
+            onCommit={handleCommit}
+            onUploadAndCommit={handleUploadAndCommit}
           />
         </div>
                 <div className="w-2/3 bg-gray-800 rounded-lg p-4 ml-4 flex flex-col">
