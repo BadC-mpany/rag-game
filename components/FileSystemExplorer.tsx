@@ -183,11 +183,11 @@ const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committe
                 {files.map((file) => {
                     const status = computeStatus(file);
                     return (
-                    <li key={file.name} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 w-full">
-                            <button onClick={() => onFileSelect(file)} className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 hover:text-green-300 transition-all flex items-center gap-3">
-                                {file.editable === false ? <FiLock className="text-gray-500" /> : <FiFileText className="text-gray-400 neon" />}
-                                <span className={`truncate ${file.editable === false ? 'text-gray-500' : ''}`}>{file.name}</span>
+                    <li key={file.name} className="flex items-start justify-between">
+                        <div className="flex items-start gap-2 w-full">
+                            <button onClick={() => onFileSelect(file)} className="w-full text-left px-3 py-2 rounded hover:bg-gray-700 hover:text-green-300 transition-all flex items-start gap-3">
+                                {file.editable === false ? <FiLock className="text-gray-500 mt-1" /> : <FiFileText className="text-gray-400 neon mt-1" />}
+                                <span className={`break-all ${file.editable === false ? 'text-gray-500' : ''}`}>{file.name}</span>
                             </button>
                             {status && (
                                 <div className={`ml-2 px-2 py-1 rounded text-xs ${status === 'U' ? 'bg-green-700 text-green-100' : 'bg-yellow-700 text-yellow-100'}`} title={status === 'U' ? 'Untracked' : 'Modified'}>{status}</div>

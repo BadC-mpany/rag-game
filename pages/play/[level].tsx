@@ -459,7 +459,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   return (
   <div className="flex h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-900 text-white font-mono">
     {/* Left Panel */}
-  <div className="w-1/4 bg-gray-800 p-4 border-r border-gray-700 flex flex-col">
+  <div className="w-1/5 bg-gray-800 p-4 border-r border-gray-700 flex flex-col">
         <div className="mb-2">
           <Link href="/" className="inline-block text-sm bg-gray-700 hover:bg-gray-600 text-green-300 px-3 py-2 rounded" onClick={() => playClick()}>← Go back</Link>
         </div>
@@ -590,7 +590,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
       </div>
 
       {/* Right Panel */}
-      <div className="w-1/4 bg-gray-800 p-4 border-l border-gray-700">
+      <div className="w-1/5 bg-gray-800 p-4 border-l border-gray-700">
         <h2 className="text-xl font-bold mb-4 text-green-400">Stats</h2>
         <div className="text-sm">
           <p>Session ID: <span className="text-gray-400 break-all">{sessionId}</span></p>
