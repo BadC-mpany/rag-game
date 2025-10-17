@@ -39,6 +39,9 @@ export const startRecording = (
   recognition.lang = 'en-US';
 
   let hasReceivedResults = false;
+  let accumulatedFinal = '';
+  let lastInterim = '';
+  let hasSentFinal = false;
 
   recognition.onstart = () => {
     log('[Transcriber] Speech recognition started');
@@ -67,11 +70,15 @@ export const startRecording = (
     }
 
     if (finalTranscript) {
+      // accumulate final transcripts in case recognition stops before caller processes onend
+      accumulatedFinal = (accumulatedFinal + ' ' + finalTranscript).trim();
       log('[Transcriber] Sending final transcript:', finalTranscript.trim());
       onTranscript(finalTranscript.trim(), true);
+      hasSentFinal = true;
     } else if (interimTranscript) {
-      log('[Transcriber] Sending interim transcript:', interimTranscript.trim());
-      onTranscript(interimTranscript.trim(), false);
+      lastInterim = interimTranscript.trim();
+      log('[Transcriber] Sending interim transcript:', lastInterim);
+      onTranscript(lastInterim, false);
     }
   };
 
@@ -90,7 +97,22 @@ export const startRecording = (
   };
 
   recognition.onend = () => {
-    log('[Transcriber] Recognition ended. hasReceivedResults:', hasReceivedResults);
+    log('[Transcriber] Recognition ended. hasReceivedResults:', hasReceivedResults, 'accumulatedFinal:', accumulatedFinal, 'lastInterim:', lastInterim);
+    // If recognition ended but we have not yet forwarded a final transcript, flush any accumulated or last interim transcript.
+    try {
+      if (!hasSentFinal) {
+        if (accumulatedFinal && accumulatedFinal.trim()) {
+          onTranscript(accumulatedFinal.trim(), true);
+        } else if (lastInterim && lastInterim.trim()) {
+          // treat last interim as final on end
+          onTranscript(lastInterim.trim(), true);
+        }
+      } else {
+        log('[Transcriber] Final transcript already sent during onresult; skipping flush on end.');
+      }
+    } catch (e) {
+      logError('[Transcriber] Error while flushing transcripts on end:', e);
+    }
   };
 
   recognition.onaudiostart = () => {
