@@ -7,11 +7,11 @@ if (typeof window !== 'undefined') {
     .catch(() => { DEBUG_LOGGING = false; });
 }
 
-const log = (...args: any[]) => {
+const log = (...args: unknown[]) => {
   if (DEBUG_LOGGING) console.log(...args);
 };
 
-const logError = (...args: any[]) => {
+const logError = (...args: unknown[]) => {
   if (DEBUG_LOGGING) console.error(...args);
 };
 
@@ -25,6 +25,7 @@ export const startRecording = (
   onTranscript: (text: string, isFinal: boolean) => void,
   onError: (error: string) => void
 ): { stop: () => void } => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   
   if (!SpeechRecognition) {
@@ -43,6 +44,7 @@ export const startRecording = (
     log('[Transcriber] Speech recognition started');
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recognition.onresult = (event: any) => {
     log('[Transcriber] onresult fired, resultIndex:', event.resultIndex, 'results.length:', event.results.length);
     hasReceivedResults = true;
@@ -73,6 +75,7 @@ export const startRecording = (
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recognition.onerror = (event: any) => {
     logError('[Transcriber] Error event:', event.error, event);
     if (event.error === 'no-speech') {

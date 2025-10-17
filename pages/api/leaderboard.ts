@@ -43,7 +43,7 @@ try {
   const cfg = fs.readFileSync(path.join(process.cwd(), 'config', 'leaderboard.json'), 'utf-8');
   const parsed = JSON.parse(cfg);
   if (parsed?.rateLimitPerHour) RATE_LIMIT_PER_HOUR = Number(parsed.rateLimitPerHour);
-} catch (e) {
+} catch {
   // ignore and use default
 }
 
@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       bucket.count += 1;
       rateMap.set(ip, bucket);
-    } catch (_e) {
+    } catch {
       // If rate limiter fails for any reason, don't block writes
     }
 

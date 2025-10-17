@@ -24,7 +24,7 @@ interface FileSystemExplorerProps {
     onUploadAndCommit?: (file: File) => void;
 }
 
-const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committedFiles = [], onFileSelect, allowsFiles = true, onUpload, onDelete, showUpload = true, showMakeNewFile = false, onCreateNewFile, levelId, onCommit, onUploadAndCommit }) => {
+const FileSystemExplorer: React.FC<FileSystemExplorerProps> = ({ files, committedFiles = [], onFileSelect, allowsFiles = true, onUpload, onDelete, showUpload = true, showMakeNewFile = false, onCreateNewFile, levelId, onUploadAndCommit }) => {
     const [diffOpen, setDiffOpen] = useState(false);
     const [diffOps, setDiffOps] = useState<DiffOp[]>([]);
     const [diffTitle, setDiffTitle] = useState('');
