@@ -11,7 +11,7 @@ export async function updateUserProgress(scoreIncrease: number, levelCompleted?:
     const currentTotalScore = user.user_metadata?.total_score || 0;
     const currentLevel = user.user_metadata?.current_level || 1;
 
-    const updates: any = {
+    const updates: Record<string, number> = {
       total_score: currentTotalScore + scoreIncrease
     };
 
@@ -24,7 +24,7 @@ export async function updateUserProgress(scoreIncrease: number, levelCompleted?:
     });
 
     return { error };
-  } catch (error) {
+  } catch {
     return { error: 'Failed to update user progress' };
   }
 }

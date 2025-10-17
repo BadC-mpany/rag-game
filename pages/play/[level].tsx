@@ -69,6 +69,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   const [editingContent, setEditingContent] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [committedState, setCommittedState] = useState<FileData[]>(initialLevel.files || []);
+  const [filesPrepended, setFilesPrepended] = useState<boolean>(false);
   const [internalLogs, setInternalLogs] = useState<string[]>([]);
   interface Stats {
     tokens?: number;
@@ -271,6 +272,29 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
     if (!level.singleTurn) setInput('');
 
     try {
+      // Build payload; prepend files only once at the start of the conversation
+      let payloadMessage = userMessage;
+      if (!filesPrepended && (committedState || []).length > 0) {
+        // Build a file contents block containing only textual files (filter out likely audio by extension)
+        const textFiles = (committedState || []).filter(f => {
+          const lower = f.name.toLowerCase();
+          // treat common audio/ binary extensions as non-text
+          const binaryExt = ['.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'];
+          return !binaryExt.some(ext => lower.endsWith(ext));
+        });
+
+        if (textFiles.length > 0) {
+          let fileBlock = 'FILE CONTENTS:\n';
+          for (const f of textFiles) {
+            fileBlock += `--- ${f.name} ---\n${f.content}\n\n`;
+          }
+          // Prepend the files block as a separate assistant-like system at the start of the conversation
+          // We attach it to the message.content so the backend receives it at the beginning
+          payloadMessage = { ...userMessage, content: `${fileBlock}\nUSER MESSAGE:\n${userMessage.content}` };
+          setFilesPrepended(true);
+        }
+      }
+
       const res = await fetch('/api/agent/message', {
         method: 'POST',
         headers: {
@@ -279,7 +303,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
         body: JSON.stringify({
           sessionId,
           levelId: level.id,
-          message: userMessage,
+          message: payloadMessage,
           files: committedState,
           isAdmin: isAdmin,
           singleTurn: !!level.singleTurn,
@@ -576,7 +600,25 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                     <button onClick={async () => {
                       const userMessage: Message = { role: 'attacker', content: input };
                       // prepare action payload
-                      const actionPayload = { sessionId, levelId: level.id, message: userMessage, files: committedState, isAdmin: isAdmin, action: 'startAttack', singleTurn: !!level.singleTurn };
+                      // build payload with one-time file prepend similar to chat
+                      let payloadMessage = userMessage;
+                      if (!filesPrepended && (committedState || []).length > 0) {
+                        const textFiles = (committedState || []).filter(f => {
+                          const lower = f.name.toLowerCase();
+                          const binaryExt = ['.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'];
+                          return !binaryExt.some(ext => lower.endsWith(ext));
+                        });
+                        if (textFiles.length > 0) {
+                          let fileBlock = 'FILE CONTENTS:\n';
+                          for (const f of textFiles) {
+                            fileBlock += `--- ${f.name} ---\n${f.content}\n\n`;
+                          }
+                          payloadMessage = { ...userMessage, content: `${fileBlock}\nUSER MESSAGE:\n${userMessage.content}` };
+                          setFilesPrepended(true);
+                        }
+                      }
+
+                      const actionPayload = { sessionId, levelId: level.id, message: payloadMessage, files: committedState, isAdmin: isAdmin, action: 'startAttack', singleTurn: !!level.singleTurn };
 
                       // update messages for single-turn: restart conversation
                       if (level.singleTurn) {

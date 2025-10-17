@@ -133,7 +133,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
             </section>
 
             <section className="mt-10">
-              <h2 id="about" className="text-3xl font-bold text-center text-green-400 mb-6">Available Games</h2>
+              <h2 id="about" className="text-3xl font-bold text-green-400 mb-6">Available Games</h2>
               <div className="grid grid-cols-1 gap-8">
                 {/* For now there is a single game: "LLM Agent in a company". Render it as a game card with nested levels. */}
                 <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">

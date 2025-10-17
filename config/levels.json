@@ -12,7 +12,8 @@
     "upload_files": false,
     "make_new_file": false,
     "unlockedBy": null,
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-002",
@@ -26,7 +27,8 @@
     "upload_files": true,
     "make_new_file": true,
     "unlockedBy": "level-001",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   }
   ,
   {
@@ -41,7 +43,8 @@
     "upload_files": false,
     "make_new_file": false,
     "unlockedBy": "level-001",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-004",
@@ -55,7 +58,8 @@
     "upload_files": true,
     "make_new_file": true,
     "unlockedBy": "level-002",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-005",
@@ -69,7 +73,8 @@
     "upload_files": true,
     "make_new_file": true,
     "unlockedBy": "level-002",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-006",
@@ -83,7 +88,8 @@
     "upload_files": false,
     "make_new_file": false,
     "unlockedBy": "level-002",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-007",
@@ -97,7 +103,8 @@
     "upload_files": true,
     "make_new_file": true,
     "unlockedBy": "level-002",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-008",
@@ -111,7 +118,8 @@
     "upload_files": true,
     "make_new_file": true,
     "unlockedBy": "level-002",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-009",
@@ -125,7 +133,8 @@
     "upload_files": false,
     "make_new_file": false,
     "unlockedBy": "level-001",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   },
   {
     "id": "level-010",
@@ -139,6 +148,7 @@
     "upload_files": false,
     "make_new_file": false,
     "unlockedBy": "level-001",
-    "gameId": "game-llm-company"
+    "gameId": "game-llm-company",
+    "allowed_files": "ANY"
   }
 ]

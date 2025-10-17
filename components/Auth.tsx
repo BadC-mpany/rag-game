@@ -101,7 +101,7 @@ function AuthModal({ onClose }: { onClose: () => void }) {
           onClose();
         }
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     }
     
