@@ -12,6 +12,23 @@ export default function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [totalScore, setTotalScore] = useState<number>(0);
 
+  const handleClearCache = () => {
+    if (window.confirm('This will clear locally stored data like file diffs, which might solve storage issues. Are you sure?')) {
+      try {
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('level-diffs:')) {
+            localStorage.removeItem(key);
+          }
+        });
+        alert('Local cache cleared. The page will now reload.');
+        window.location.reload();
+      } catch (e) {
+        alert('Failed to clear cache.');
+        console.error(e);
+      }
+    }
+  };
+
   useEffect(() => {
     if (user?.user_metadata?.total_score !== undefined) {
       setTotalScore(user.user_metadata.total_score);
@@ -74,6 +91,14 @@ export default function Sidebar() {
               <button onClick={() => signOut()} className="w-full text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded">Sign out</button>
             </div>
           )}
+          <div className="mt-3 border-t border-gray-700 pt-3">
+            <button 
+                onClick={handleClearCache} 
+                className="w-full text-sm bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded"
+            >
+                Clear Local Cache
+            </button>
+          </div>
         </div>
       </div>
     </aside>
