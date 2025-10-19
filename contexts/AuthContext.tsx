@@ -77,10 +77,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     if (!supabase) return { error: new Error('Supabase not configured') as AuthError };
     
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    // Initialize user in leaderboard if sign in successful
+    if (!error && data.session) {
+      try {
+        await fetch('/api/user/initialize', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${data.session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (e) {
+        console.log('Failed to initialize user in leaderboard:', e);
+      }
+    }
+    
     return { error };
   };
 

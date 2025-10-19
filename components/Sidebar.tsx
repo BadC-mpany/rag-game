@@ -61,10 +61,10 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-2">
-        <Link href="/" className="px-3 py-2 rounded hover:bg-gray-700 transition-all">Home</Link>
-        <Link href="/leaderboard" className="px-3 py-2 rounded hover:bg-gray-700 transition-all">Global Ranking</Link>
-        <Link href="/about" className="px-3 py-2 rounded hover:bg-gray-700 transition-all">About</Link>
-        <Link href="/contact" className="px-3 py-2 rounded hover:bg-gray-700 transition-all">Contact</Link>
+        <Link href="/" className="px-3 py-2 rounded hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:translate-x-1">Home</Link>
+        <Link href="/leaderboard" className="px-3 py-2 rounded hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:translate-x-1">Global Ranking</Link>
+        <Link href="/about" className="px-3 py-2 rounded hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:translate-x-1">About</Link>
+        <Link href="/contact" className="px-3 py-2 rounded hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:translate-x-1">Contact</Link>
       </nav>
 
       <div className="mt-auto pt-4">
@@ -78,23 +78,22 @@ export default function Sidebar() {
             </div>
           ) : null}
 
-          <div className="flex items-center gap-2 mt-3">
-            <button onClick={() => { playClick(); setShareOpen(!shareOpen); }} className="flex-1 w-full bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-3 rounded hover:brightness-110 transition-all inline-flex items-center gap-2">
+          <div className="mt-3">
+            <button onClick={() => { playClick(); setShareOpen(!shareOpen); }} className="w-full bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-3 rounded hover:brightness-110 transition-all inline-flex items-center gap-2 btn-press">
               <FaShareAlt />
               {shareOpen ? 'Close' : 'Share'}
             </button>
-            <button onClick={() => setSidebarOpen(false)} title="Collapse sidebar" className="bg-gray-700 text-gray-200 p-2 rounded hover:bg-gray-600">✕</button>
           </div>
           <ShareModal open={shareOpen} onClose={() => { playClick(); setShareOpen(false); }} />
           {user && (
             <div className="mt-3">
-              <button onClick={() => signOut()} className="w-full text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded">Sign out</button>
+              <button onClick={() => signOut()} className="w-full text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded btn-press">Sign out</button>
             </div>
           )}
           <div className="mt-3 border-t border-gray-700 pt-3">
             <button 
                 onClick={handleClearCache} 
-                className="w-full text-sm bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded"
+                className="w-full text-sm bg-gray-600 hover:bg-gray-500 text-white py-2 px-3 rounded btn-press"
             >
                 Clear Local Cache
             </button>

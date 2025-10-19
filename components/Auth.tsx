@@ -15,15 +15,16 @@ export default function Auth() {
   }
 
   if (user) {
+    const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'User';
+    
     return (
       <div className="flex items-center space-x-3">
-        <div className="text-sm text-gray-300">Signed in as</div>
-        <div className="px-3 py-1 bg-gray-800 border border-gray-700 rounded text-sm">
-          {user.email}
+        <div className="text-sm text-gray-300">
+          {displayName}
         </div>
         <button 
           onClick={() => signOut()} 
-          className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded transition-all shadow-sm"
+          className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 rounded transition-all shadow-sm btn-press"
         >
           Sign out
         </button>
@@ -36,7 +37,7 @@ export default function Auth() {
       <div className="flex items-center gap-2">
         <button 
           onClick={() => setShowAuthModal(true)}
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-3 rounded transition-all shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-3 rounded transition-all shadow-[0_4px_10px_rgba(0,0,0,0.5)] btn-press"
         >
           Sign In
         </button>
@@ -210,7 +211,7 @@ function AuthModal({ onClose }: { onClose: () => void }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-4 rounded transition-all disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold py-2 px-4 rounded transition-all disabled:opacity-50 btn-press"
           >
             {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
           </button>

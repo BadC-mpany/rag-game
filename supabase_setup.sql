@@ -24,6 +24,7 @@ BEGIN
     SELECT 
         COALESCE(
             (auth.users.raw_user_meta_data->>'display_name'),
+            (auth.users.user_metadata->>'display_name'),
             split_part(auth.users.email, '@', 1),
             'Anonymous'
         ),
@@ -42,3 +43,30 @@ CREATE TRIGGER set_leaderboard_name
     BEFORE INSERT OR UPDATE ON leaderboard
     FOR EACH ROW
     EXECUTE FUNCTION update_leaderboard_name();
+
+-- Function to automatically add new users to leaderboard
+CREATE OR REPLACE FUNCTION public.add_user_to_leaderboard()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Insert into leaderboard, let the name trigger handle the name/email population
+    INSERT INTO public.leaderboard (user_id, level_id, score, timestamp)
+    VALUES (NEW.id, 'level-1', 0, NOW());
+    
+    RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Log error but don't fail user creation
+        RAISE LOG 'Failed to add user % to leaderboard: %', NEW.id, SQLERRM;
+        RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permission on the function
+GRANT EXECUTE ON FUNCTION public.add_user_to_leaderboard() TO service_role;
+
+-- Trigger to add users to leaderboard when they sign up
+DROP TRIGGER IF EXISTS add_new_user_to_leaderboard ON auth.users;
+CREATE TRIGGER add_new_user_to_leaderboard
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.add_user_to_leaderboard();

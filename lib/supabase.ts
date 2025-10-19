@@ -16,7 +16,7 @@ export function getSupabaseClient(): SupabaseClient | null {
     return null;
   }
 
-  anonClient = createClient(url, anonKey, { auth: { persistSession: false } });
+  anonClient = createClient(url, anonKey, { auth: { persistSession: true } });
   return anonClient;
 }
 

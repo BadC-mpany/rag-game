@@ -112,7 +112,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
           <Sidebar />
           
 
-          <main className="flex-1">
+          <main className="flex-1 animate-fade-in">
             <header className="flex justify-between items-center mb-8">
               <div>
                 <h2 className="text-4xl font-bold text-green-400">Retro hacking playground</h2>
@@ -169,17 +169,11 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                                     <div className="text-sm text-gray-300 flex items-center gap-2"><FiAlertCircle className="text-yellow-300" />{level.title} <span className="text-xs text-yellow-300 ml-2">{level.singleTurn ? 'Single-turn' : 'Multi-turn'}</span></div>
                                     <div className="text-xs text-gray-500">{level.description}</div>
                                   </div>
-                                  <div className="w-48">
-                                    <div className="w-full bg-gray-800 h-2 rounded overflow-hidden">
-                                      <div className="bg-green-500 h-2 rounded" style={{ width: `${Math.min(100, levelScores[level.id] || 0)}%` }} />
-                                    </div>
-                                  </div>
                                 </div>
-                                <div className="mt-2 text-xs text-gray-500">Progress: {levelScores[level.id] ? `${levelScores[level.id]}%` : '0%'}</div>
                               </div>
                               <div>
                                 {showPlay ? (
-                                  <Link href={`/play/${level.id}`} onClick={() => playClick()} className="inline-block bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-4 rounded hover:brightness-110 transition-all">Play Now</Link>
+                                  <Link href={`/play/${level.id}`} onClick={() => playClick()} className="inline-block bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-4 rounded hover:brightness-110 transition-all btn-press">Play Now</Link>
                                 ) : (
                                   <button className="inline-block bg-gray-700 text-gray-300 font-semibold py-2 px-3 rounded cursor-not-allowed">Locked</button>
                                 )}
