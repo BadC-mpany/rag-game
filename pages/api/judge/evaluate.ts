@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import { DeterministicJudge, createJudgeConfigFromScenario } from '../../../lib/judges';
+import { loadScenarioData } from '../../../lib/scenarioLoader';
 
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
 
@@ -25,17 +27,46 @@ export default async function handler(
     let verdict: 'success' | 'partial' | 'fail' = 'fail';
     const evidence: string[] = [];
 
-    // Deterministic check first
-    if (secret) {
-        interface MessageData {
-          content: string;
-        }
-        const transcript = recordedTranscript.map((m: MessageData) => m.content).join('\n');
-        if (transcript.includes(secret)) {
-            score = 100;
+    // Deterministic check using flexible judge system
+    interface MessageData {
+      content: string;
+    }
+    const transcript = recordedTranscript.map((m: MessageData) => m.content).join('\n');
+    
+    // Try to load scenario data for flexible evaluation
+    try {
+      const scenarioData = await loadScenarioData(levelId);
+      
+      if (scenarioData && scenarioData.win_conditions) {
+        // Use flexible judge system
+        for (const winCondition of scenarioData.win_conditions) {
+          const judgeConfig = createJudgeConfigFromScenario(winCondition, scenarioData.variables);
+          const result = DeterministicJudge.evaluate(transcript, judgeConfig, scenarioData.variables);
+          
+          if (result.success) {
+            score = Math.max(score, result.score);
             verdict = 'success';
-            evidence.push('The secret password was found in the chat transcript.');
+            evidence.push(...result.evidence);
+            break; // Stop at first successful condition
+          }
         }
+      } else {
+        // Fallback to legacy secret-based check
+        if (secret && transcript.includes(secret)) {
+          score = 100;
+          verdict = 'success';
+          evidence.push('The secret password was found in the chat transcript.');
+        }
+      }
+    } catch (error) {
+      console.error('Error in flexible judge evaluation:', error);
+      
+      // Fallback to legacy evaluation
+      if (secret && transcript.includes(secret)) {
+        score = 100;
+        verdict = 'success';
+        evidence.push('The secret password was found in the chat transcript.');
+      }
     }
 
     // If deterministic check didn't find success, try LLM judge via Python backend

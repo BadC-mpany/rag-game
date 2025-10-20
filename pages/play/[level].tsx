@@ -269,8 +269,8 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
       setMessages((prev) => [...prev, userMessage]);
     }
 
-    // For multi-turn clear input; for single-turn keep it (user may want to edit their single move)
-    if (!level.singleTurn) setInput('');
+    // Clear input when message is sent and RAG is thinking
+    setInput('');
 
     try {
       // Build payload; for single-turn levels always prepend files (so repeated submissions include them).
@@ -459,7 +459,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   return (
   <div className="flex h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-900 text-white font-mono">
     {/* Left Panel */}
-  <div className="w-1/5 bg-gray-800 p-4 border-r border-gray-700 flex flex-col">
+  <div className="w-1/5 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto">
         <div className="mb-2">
           <Link href="/" className="inline-block text-sm bg-gray-700 hover:bg-gray-600 text-green-300 px-3 py-2 rounded" onClick={() => playClick()}>← Go back</Link>
         </div>
@@ -605,7 +605,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                 {/* Start Attack button for multi-action levels */}
                 {(level.singleTurn || level.allowsFiles) && (
                   <div className="mt-3">
-                    <button onClick={async () => {
+                    <button className="hidden" onClick={async () => {
                       const userMessage: Message = { role: 'attacker', content: input };
                       // prepare action payload
                       // build payload with one-time file prepend similar to chat
