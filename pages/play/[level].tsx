@@ -472,7 +472,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
               console.error('Failed to refresh user progress:', error);
             }
             
-            // Refresh sidebar stats
+            // Refresh sidebar stats (force refresh since score increased)
             if ((window as any).refreshUserStats) {
               (window as any).refreshUserStats();
             }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { FaShareAlt } from 'react-icons/fa';
 import ShareModal from './ShareModal';
 import { playClick } from '../lib/sound';
@@ -8,16 +9,25 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar() {
   const { user, session, signOut } = useAuth();
+  const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
   const [sidebarOpen] = useState(true);
   const [totalScore, setTotalScore] = useState<number>(0);
   const [currentLevel, setCurrentLevel] = useState<number>(1);
+  const [isClient, setIsClient] = useState(false);
+
+  // Determine if sign out button should be shown based on current route
+  const shouldShowSignOut = () => {
+    const currentPath = router.pathname;
+    const hideSignOutPages = ['/', '/leaderboard', '/about', '/contact'];
+    return !hideSignOutPages.includes(currentPath);
+  };
 
   const handleClearCache = () => {
     if (window.confirm('This will clear locally stored data like file diffs, which might solve storage issues. Are you sure?')) {
       try {
         Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('level-diffs:')) {
+          if (key.startsWith('level-diffs:') || key === 'cachedTotalScore' || key === 'cachedCurrentLevel') {
             localStorage.removeItem(key);
           }
         });
@@ -30,8 +40,19 @@ export default function Sidebar() {
     }
   };
 
-  const fetchUserStats = async () => {
+  const fetchUserStats = async (forceRefresh = false) => {
     if (!user) return;
+    
+    // Check if we have cached data and don't need to refresh
+    if (!forceRefresh) {
+      const cachedScore = localStorage.getItem('cachedTotalScore');
+      const cachedLevel = localStorage.getItem('cachedCurrentLevel');
+      if (cachedScore && cachedLevel) {
+        setTotalScore(parseInt(cachedScore));
+        setCurrentLevel(parseInt(cachedLevel));
+        return;
+      }
+    }
     
     try {
       const res = await fetch('/api/user/stats', {
@@ -42,8 +63,17 @@ export default function Sidebar() {
       
       if (res.ok) {
         const data = await res.json();
-        setTotalScore(data.totalScore || 0);
-        setCurrentLevel(data.currentLevel || 1);
+        const newScore = data.totalScore || 0;
+        const newLevel = data.currentLevel || 1;
+        
+        // Only update if score increased (new level completed)
+        const currentCachedScore = parseInt(localStorage.getItem('cachedTotalScore') || '0');
+        if (newScore > currentCachedScore || forceRefresh) {
+          setTotalScore(newScore);
+          setCurrentLevel(newLevel);
+          localStorage.setItem('cachedTotalScore', newScore.toString());
+          localStorage.setItem('cachedCurrentLevel', newLevel.toString());
+        }
       } else {
         // Fallback to localStorage for existing users
         try {
@@ -65,12 +95,30 @@ export default function Sidebar() {
   };
 
   useEffect(() => {
-    fetchUserStats();
-  }, [user]);
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      // Load cached values on client side
+      try {
+        const cachedScore = localStorage.getItem('cachedTotalScore');
+        const cachedLevel = localStorage.getItem('cachedCurrentLevel');
+        if (cachedScore) setTotalScore(parseInt(cachedScore));
+        if (cachedLevel) setCurrentLevel(parseInt(cachedLevel));
+      } catch { }
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchUserStats();
+    }
+  }, [user, isClient]);
 
   // Expose refresh function globally so other components can call it
   useEffect(() => {
-    (window as any).refreshUserStats = fetchUserStats;
+    (window as any).refreshUserStats = () => fetchUserStats(true); // Force refresh when called from other components
     return () => {
       delete (window as any).refreshUserStats;
     };
@@ -82,7 +130,7 @@ export default function Sidebar() {
         <div className="flex items-center space-x-3">
           <Image src="/badcompany_logo1.jpg" alt="BadCompany Logo" width={44} height={44} className="rounded" />
           <div>
-            <h1 className="text-2xl font-bold text-green-400">badcompany</h1>
+            <h1 className="text-2xl font-bold text-green-400">Badcompany</h1>
             <p className="text-xs text-gray-400">Hone your red-team skills</p>
           </div>
         </div>
@@ -118,7 +166,7 @@ export default function Sidebar() {
             </button>
           </div>
           <ShareModal open={shareOpen} onClose={() => { playClick(); setShareOpen(false); }} />
-          {user && (
+          {user && shouldShowSignOut() && (
             <div className="mt-3">
               <button onClick={() => signOut()} className="w-full text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded btn-press">Sign out</button>
             </div>

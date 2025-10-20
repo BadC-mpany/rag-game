@@ -12,7 +12,7 @@ const About: NextPage = () => {
             <div className="flex items-center gap-6">
               <Image src="/badcompany_logo1.jpg" alt="BadCompany Logo" width={80} height={80} className="rounded" />
               <div>
-                <h1 className="text-3xl font-bold text-green-400">About badcompany</h1>
+                <h1 className="text-3xl font-bold text-green-400">About Badcompany</h1>
                 <p className="text-gray-400 mt-2">A retro-themed red-team game to help researchers and enthusiasts find prompt-injection and social engineering flaws in LLM-based agents.</p>
               </div>
             </div>

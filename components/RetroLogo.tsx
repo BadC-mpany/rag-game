@@ -8,7 +8,7 @@ const RetroLogo: React.FC<{ size?: number }> = ({ size = 48 }) => {
         <path d="M16 40 L24 24 L32 40 Z" fill="#34D399" className="origin-center animate-pulse" />
         <rect x="36" y="20" width="12" height="24" rx="2" fill="#60A5FA" opacity="0.9" />
       </g>
-      <text x="8" y="56" fill="#94A3B8" fontSize="6" fontFamily="monospace">badcompany</text>
+      <text x="8" y="56" fill="#94A3B8" fontSize="6" fontFamily="monospace">Badcompany</text>
     </svg>
   );
 }

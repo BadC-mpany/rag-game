@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get user's total score and current level from leaderboard
     const { data: leaderboardEntries, error } = await supabase
       .from('leaderboard')
-      .select('score, current_level')
+      .select('level_id, score')
       .eq('user_id', user.id);
 
     if (error) {
@@ -60,8 +60,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Sum all scores
       totalScore = leaderboardEntries.reduce((sum, entry) => sum + (entry.score || 0), 0);
       
-      // Get the maximum current_level from any entry
-      currentLevel = Math.max(...leaderboardEntries.map(entry => entry.current_level || 1));
+      // Calculate current level based on completed levels
+      const completedLevels = leaderboardEntries
+        .filter(entry => entry.score > 0)
+        .map(entry => entry.level_id);
+      
+      if (completedLevels.length > 0) {
+        // Convert level IDs to numbers and find the highest completed level
+        const completedLevelNumbers = completedLevels
+          .map(id => parseInt(id))
+          .filter(num => !isNaN(num));
+        
+        if (completedLevelNumbers.length > 0) {
+          const maxCompletedLevel = Math.max(...completedLevelNumbers);
+          // Unlock the next level after the highest completed one
+          currentLevel = maxCompletedLevel + 1;
+        }
+      }
     }
 
     res.status(200).json({
