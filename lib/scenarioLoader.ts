@@ -3,7 +3,7 @@ export interface ScenarioData {
   id: string;
   name: string;
   description: string;
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
   win_conditions: Array<{
     type: string;
     targets?: string;

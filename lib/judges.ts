@@ -15,11 +15,11 @@ export interface JudgeResult {
   success: boolean;
   score: number;
   evidence: string[];
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export class DeterministicJudge {
-  static evaluate(transcript: string, config: JudgeConfig, scenarioVariables?: any): JudgeResult {
+  static evaluate(transcript: string, config: JudgeConfig, scenarioVariables?: Record<string, unknown>): JudgeResult {
     const result: JudgeResult = {
       success: false,
       score: 0,
@@ -61,7 +61,7 @@ export class DeterministicJudge {
             result.success = true;
             result.score = config.successScore || 100;
             const message = config.successMessage || `Found target text: "${target}"`;
-            result.evidence.push(scenarioVariables?.success_message || message);
+            result.evidence.push((scenarioVariables?.success_message as string) || message);
             break;
           }
         }
@@ -109,16 +109,16 @@ export class DeterministicJudge {
 }
 
 // Helper function to convert scenario win_conditions to JudgeConfig
-export function createJudgeConfigFromScenario(winCondition: any, scenarioVariables?: any): JudgeConfig {
+export function createJudgeConfigFromScenario(winCondition: Record<string, unknown>, scenarioVariables?: Record<string, unknown>): JudgeConfig {
   const config: JudgeConfig = {
-    type: winCondition.type || 'contains_text',
+    type: (winCondition.type as JudgeConfig['type']) || 'contains_text',
     caseSensitive: winCondition.caseSensitive !== false, // Default to true
   };
 
   // Handle score (can be a variable reference or direct number)
   if (winCondition.score) {
-    if (scenarioVariables && scenarioVariables[winCondition.score]) {
-      config.successScore = scenarioVariables[winCondition.score];
+    if (scenarioVariables && scenarioVariables[winCondition.score as string]) {
+      config.successScore = scenarioVariables[winCondition.score as string] as number;
     } else if (typeof winCondition.score === 'number') {
       config.successScore = winCondition.score;
     } else {
@@ -130,24 +130,24 @@ export function createJudgeConfigFromScenario(winCondition: any, scenarioVariabl
 
   // Handle message (can be a variable reference or direct string)
   if (winCondition.message) {
-    if (scenarioVariables && scenarioVariables[winCondition.message]) {
-      config.successMessage = scenarioVariables[winCondition.message];
+    if (scenarioVariables && scenarioVariables[winCondition.message as string]) {
+      config.successMessage = scenarioVariables[winCondition.message as string] as string;
     } else {
-      config.successMessage = winCondition.message;
+      config.successMessage = winCondition.message as string;
     }
   }
 
   // Handle targets (can be variable reference or direct targets)
   if (winCondition.targets) {
-    config.targetVariable = winCondition.targets;
+    config.targetVariable = winCondition.targets as string;
   } else if (winCondition.target) {
-    config.targets = [winCondition.target];
+    config.targets = [winCondition.target as string];
   }
 
   // Copy other properties
-  if (winCondition.pattern) config.pattern = winCondition.pattern;
-  if (winCondition.minCount !== undefined) config.minCount = winCondition.minCount;
-  if (winCondition.maxCount !== undefined) config.maxCount = winCondition.maxCount;
+  if (winCondition.pattern) config.pattern = winCondition.pattern as string;
+  if (winCondition.minCount !== undefined) config.minCount = winCondition.minCount as number;
+  if (winCondition.maxCount !== undefined) config.maxCount = winCondition.maxCount as number;
 
   return config;
 }

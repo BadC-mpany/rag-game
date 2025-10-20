@@ -15,25 +15,28 @@ const LeaderboardPage: NextPage = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllLevels, setShowAllLevels] = useState(false);
+
+  const fetchLeaderboard = async (showAll: boolean = false) => {
+    setLoading(true);
+    try {
+      const url = showAll ? '/api/leaderboard' : '/api/leaderboard?levelId=1';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setLeaderboard(data.leaderboard || []);
+      } else {
+        setError('Failed to fetch leaderboard.');
+      }
+    } catch {
+      setError('An error occurred.');
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      try {
-        const res = await fetch('/api/leaderboard?levelId=level-001');
-        if (res.ok) {
-          const data = await res.json();
-          setLeaderboard(data.leaderboard || []);
-        } else {
-          setError('Failed to fetch leaderboard.');
-        }
-      } catch {
-        setError('An error occurred.');
-      }
-      setLoading(false);
-    };
-
-    fetchLeaderboard();
-  }, []);
+    fetchLeaderboard(showAllLevels);
+  }, [showAllLevels]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-mono">
@@ -51,7 +54,17 @@ const LeaderboardPage: NextPage = () => {
               </div>
             </header>
 
-            <h2 className="text-xl font-bold text-gray-400 mb-6">Level 1: Basic Injection</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-400">
+                {showAllLevels ? 'All Levels' : 'Level 1: Competitor Leak'}
+              </h2>
+              <button
+                onClick={() => setShowAllLevels(!showAllLevels)}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-all"
+              >
+                {showAllLevels ? 'Show Level 1 Only' : 'Show All Levels'}
+              </button>
+            </div>
 
             {loading ? (
               <div className="bg-gray-800 rounded-lg p-4">
@@ -61,6 +74,7 @@ const LeaderboardPage: NextPage = () => {
                       <th className="p-2">Rank</th>
                       <th className="p-2">Player</th>
                       <th className="p-2">Score</th>
+                      {showAllLevels && <th className="p-2">Level</th>}
                       <th className="p-2">Timestamp</th>
                     </tr>
                   </thead>
@@ -76,6 +90,11 @@ const LeaderboardPage: NextPage = () => {
                         <td className="p-2">
                           <div className="h-4 bg-gray-700 rounded animate-pulse w-16"></div>
                         </td>
+                        {showAllLevels && (
+                          <td className="p-2">
+                            <div className="h-4 bg-gray-700 rounded animate-pulse w-20"></div>
+                          </td>
+                        )}
                         <td className="p-2">
                           <div className="h-4 bg-gray-700 rounded animate-pulse w-32"></div>
                         </td>
@@ -94,6 +113,7 @@ const LeaderboardPage: NextPage = () => {
                       <th className="p-2">Rank</th>
                       <th className="p-2">Player</th>
                       <th className="p-2">Score</th>
+                      {showAllLevels && <th className="p-2">Level</th>}
                       <th className="p-2">Timestamp</th>
                     </tr>
                   </thead>
@@ -103,6 +123,7 @@ const LeaderboardPage: NextPage = () => {
                         <td className="p-2">{index + 1}</td>
                         <td className="p-2">{entry.name}</td>
                         <td className="p-2">{entry.score}</td>
+                        {showAllLevels && <td className="p-2">{entry.level_id.startsWith('level-') ? entry.level_id.replace('level-', '') : entry.level_id}</td>}
                         <td className="p-2">{new Date(entry.timestamp).toLocaleString()}</td>
                       </tr>
                     ))}

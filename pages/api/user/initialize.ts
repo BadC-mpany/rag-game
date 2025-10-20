@@ -36,21 +36,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ message: 'User already initialized' });
     }
 
-    // Add user to leaderboard
-    const displayName = user.user_metadata?.display_name || 
-                       user.raw_user_meta_data?.display_name || 
-                       user.email?.split('@')[0] || 
-                       'Anonymous';
-
+    // Add user to leaderboard (let the trigger handle name/email population)
     const { error: insertError } = await supabase
       .from('leaderboard')
       .insert({
         user_id: user.id,
-        level_id: 'level-1',
+               level_id: '1',
         score: 0,
-        timestamp: new Date().toISOString(),
-        name: displayName,
-        email: user.email
+        timestamp: new Date().toISOString()
       });
 
     if (insertError) {

@@ -37,6 +37,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('[AuthContext] initial session:', { 
+        hasSession: !!session, 
+        hasAccessToken: !!session?.access_token,
+        userId: session?.user?.id 
+      });
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -47,6 +52,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[AuthContext] auth state change:', { 
+          event, 
+          hasSession: !!session, 
+          hasAccessToken: !!session?.access_token,
+          userId: session?.user?.id 
+        });
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -80,6 +91,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
+    });
+    
+    console.log('[AuthContext] signIn result:', { 
+      hasError: !!error, 
+      hasSession: !!data.session, 
+      hasAccessToken: !!data.session?.access_token,
+      userId: data.session?.user?.id 
     });
     
     // Initialize user in leaderboard if sign in successful

@@ -47,7 +47,9 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
       return rawScores ? JSON.parse(rawScores) : {};
     } catch { return {}; }
   });
-  const { user } = useAuth();
+  
+  const [currentLevel, setCurrentLevel] = useState<number>(1);
+  const { user, session } = useAuth();
 
   // Hydration flag: avoid rendering level availability on the server to prevent
   // flicker/hydration mismatch with client-localStorage-derived state.
@@ -59,32 +61,54 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   // Fetch server progress when user is signed in and merge into localStorage
   useEffect(() => {
     const fetchProgress = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('[frontend] no user, skipping progress fetch');
+        return;
+      }
+      
+      console.log('[frontend] fetching progress for user:', { 
+        hasAccessToken: !!session?.access_token, 
+        tokenLength: session?.access_token?.length,
+        userId: user.id 
+      });
+      
       try {
-        const res = await fetch('/api/progress');
+        const res = await fetch('/api/user/progress', {
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+          }
+        });
         if (res.ok) {
           const data = await res.json();
+          console.log('[frontend] progress data received:', data);
           try {
-            const rawScores = localStorage.getItem('levelScores');
-            const scores = rawScores ? JSON.parse(rawScores) : {};
-            const mergedScores = { ...scores, ...(data.levelScores || {}) };
-            for (const k of Object.keys(mergedScores)) {
-              mergedScores[k] = Math.max(scores[k] || 0, mergedScores[k] || 0);
-            }
-            localStorage.setItem('levelScores', JSON.stringify(mergedScores));
-            setLevelScores(mergedScores);
+            // Update completed levels based on non-zero scores from leaderboard
+            const newCompletedLevels = data.completedLevels || [];
+            localStorage.setItem('completedLevels', JSON.stringify(newCompletedLevels));
+            setCompletedLevels(newCompletedLevels);
 
-            const rawCompleted = localStorage.getItem('completedLevels');
-            const comp = rawCompleted ? JSON.parse(rawCompleted) : [];
-            const mergedCompleted = Array.from(new Set([...(comp || []), ...(data.completedLevels || [])]));
-            localStorage.setItem('completedLevels', JSON.stringify(mergedCompleted));
-            setCompletedLevels(mergedCompleted);
+            // Update current level
+            setCurrentLevel(data.currentLevel || 1);
+
+            // Update level scores from leaderboard entries
+            const scores: Record<string, number> = {};
+            if (data.leaderboardEntries) {
+              data.leaderboardEntries.forEach((entry: any) => {
+                if (entry.score > 0) {
+                  scores[entry.level_id] = entry.score;
+                }
+              });
+            }
+            localStorage.setItem('levelScores', JSON.stringify(scores));
+            setLevelScores(scores);
           } catch {
             // ignore local merge errors
           }
+        } else {
+          console.log('[frontend] progress fetch failed:', res.status, res.statusText);
         }
-      } catch {
-        // ignore network errors
+      } catch (error) {
+        console.log('[frontend] progress fetch error:', error);
       }
     }
     fetchProgress();
@@ -154,14 +178,14 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                         // Simple sequential unlock: level N unlocks if level N-1 is completed (or it's level 1)
                         // Users can replay any unlocked level
                         return levels.map((level, idx) => {
-                          // Level is unlocked if:
-                          // 1. It's the first level (idx === 0), OR
-                          // 2. Previous level is completed, OR
-                          // 3. This level is already completed (can replay), OR
-                          // 4. Admin mode is on
-                          const prevLevelCompleted = idx === 0 || completedLevels.includes(levels[idx - 1].id);
+                          const levelNumber = idx + 1;
                           const thisLevelCompleted = completedLevels.includes(level.id);
-                          const isUnlocked = isAdmin || prevLevelCompleted || thisLevelCompleted;
+                          
+                          // Level is unlocked if:
+                          // 1. Admin mode is on, OR
+                          // 2. Level number is <= current level (sequential unlock), OR
+                          // 3. This level is already completed (can replay)
+                          const isUnlocked = isAdmin || levelNumber <= currentLevel || thisLevelCompleted;
                           
                           return (
                             <div key={level.id} className={`flex items-center gap-4 ${!isUnlocked ? 'opacity-60' : ''} bg-gray-900 p-3 rounded border border-gray-800`}>
@@ -184,7 +208,9 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                                     {thisLevelCompleted ? 'Replay' : 'Play Now'}
                                   </Link>
                                 ) : (
-                                  <button className="inline-block bg-gray-700 text-gray-300 font-semibold py-2 px-3 rounded cursor-not-allowed">Locked</button>
+                                  <button className="inline-block bg-gray-700 text-gray-300 font-semibold py-2 px-3 rounded cursor-not-allowed">
+                                    {levelNumber > currentLevel ? 'Locked' : 'Locked'}
+                                  </button>
                                 )}
                               </div>
                             </div>

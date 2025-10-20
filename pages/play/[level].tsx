@@ -344,17 +344,35 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
 
   const handleSubmitToLeaderboard = async (score: number) => {
     if (!session) {
-      // User not authenticated, skip leaderboard submission
+      console.log('[frontend] no session available for leaderboard submission');
       return;
     }
 
+    console.log('[frontend] submitting to leaderboard with session:', { 
+      hasAccessToken: !!session.access_token, 
+      tokenLength: session.access_token?.length,
+      userId: session.user?.id,
+      sessionKeys: Object.keys(session),
+      accessTokenPreview: session.access_token ? session.access_token.substring(0, 20) + '...' : 'none'
+    });
+
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      };
+      
+      console.log('[frontend] sending headers:', { 
+        hasAuthHeader: !!headers.Authorization,
+        authHeaderLength: headers.Authorization?.length,
+        authHeaderPreview: headers.Authorization?.substring(0, 30) + '...',
+        fullHeaders: headers
+      });
+      
       const res = await fetch('/api/leaderboard/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ 
           levelId: level.id, 
           score: score 
@@ -443,6 +461,36 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
               await updateUserProgress(result.score, true);
             } catch (error) {
               console.error('Failed to update user progress:', error);
+            }
+            
+            // Refresh user progress to update current level and completed levels
+            try {
+              const progressRes = await fetch('/api/user/progress', {
+                headers: {
+                  'Authorization': `Bearer ${session?.access_token}`,
+                }
+              });
+              if (progressRes.ok) {
+                const progressData = await progressRes.json();
+                // Update localStorage with fresh data
+                localStorage.setItem('completedLevels', JSON.stringify(progressData.completedLevels || []));
+                const scores: Record<string, number> = {};
+                if (progressData.leaderboardEntries) {
+                  progressData.leaderboardEntries.forEach((entry: any) => {
+                    if (entry.score > 0) {
+                      scores[entry.level_id] = entry.score;
+                    }
+                  });
+                }
+                localStorage.setItem('levelScores', JSON.stringify(scores));
+              }
+            } catch (error) {
+              console.error('Failed to refresh user progress:', error);
+            }
+            
+            // Refresh sidebar stats
+            if ((window as any).refreshUserStats) {
+              (window as any).refreshUserStats();
             }
           }
 
@@ -643,6 +691,29 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
               {!user ? '🔒 Sign in to submit' : 'Submit for Judging'}
             </button>
         </div>
+        {user && (
+          <div className="mt-4">
+            <button 
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/debug/session', {
+                    headers: {
+                      'Authorization': `Bearer ${session?.access_token}`,
+                    }
+                  });
+                  const data = await res.json();
+                  console.log('Session debug:', data);
+                  alert('Check console for session debug info');
+                } catch (e) {
+                  console.error('Session debug error:', e);
+                }
+              }}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+            >
+              Debug Session
+            </button>
+          </div>
+        )}
         {isAdmin && (
             <div className="mt-8">
                 <h2 className="text-xl font-bold mb-4 text-green-400">Internal Logs</h2>
