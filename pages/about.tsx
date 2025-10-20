@@ -26,12 +26,6 @@ const About: NextPage = () => {
               <div className="bg-gray-900 p-4 rounded border border-gray-800">
                 <h3 className="text-lg font-semibold text-green-400">Mission</h3>
                 <p className="text-gray-400 mt-2">We create playful but realistic agent simulations so that vulnerabilities can be discovered in a safe environment.</p>
-                <h4 className="text-sm text-green-300 mt-4">Contact & Links</h4>
-                <ul className="text-xs text-gray-400 mt-2 space-y-2">
-                  <li>Email: <a href="mailto:janos.mozer@growmesh.io" className="text-green-300 hover:text-green-200 transition-colors">janos.mozer@growmesh.io</a></li>
-                  <li>LinkedIn: <a href="https://www.linkedin.com/company/growmesh-io" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 transition-colors">@growmesh-io</a></li>
-                  <li>Discord: <a href="https://discord.gg/mu5QZ98A" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:text-purple-300 transition-colors">@mu5QZ98A</a></li>
-                </ul>
               </div>
             </div>
           </main>
