@@ -45,7 +45,6 @@ export default function Sidebar() {
         setTotalScore(data.totalScore || 0);
         setCurrentLevel(data.currentLevel || 1);
       } else {
-        console.log('[Sidebar] Failed to fetch user stats:', res.status);
         // Fallback to localStorage for existing users
         try {
           const rawScores = localStorage.getItem('levelScores');
@@ -55,7 +54,6 @@ export default function Sidebar() {
         } catch { }
       }
     } catch (error) {
-      console.log('[Sidebar] Error fetching user stats:', error);
       // Fallback to localStorage for existing users
       try {
         const rawScores = localStorage.getItem('levelScores');

@@ -344,30 +344,14 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
 
   const handleSubmitToLeaderboard = async (score: number) => {
     if (!session) {
-      console.log('[frontend] no session available for leaderboard submission');
       return;
     }
-
-    console.log('[frontend] submitting to leaderboard with session:', { 
-      hasAccessToken: !!session.access_token, 
-      tokenLength: session.access_token?.length,
-      userId: session.user?.id,
-      sessionKeys: Object.keys(session),
-      accessTokenPreview: session.access_token ? session.access_token.substring(0, 20) + '...' : 'none'
-    });
 
     try {
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`,
       };
-      
-      console.log('[frontend] sending headers:', { 
-        hasAuthHeader: !!headers.Authorization,
-        authHeaderLength: headers.Authorization?.length,
-        authHeaderPreview: headers.Authorization?.substring(0, 30) + '...',
-        fullHeaders: headers
-      });
       
       const res = await fetch('/api/leaderboard/submit', {
         method: 'POST',
@@ -494,11 +478,11 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
             }
           }
 
-          alert(`🎉 Success! Level Completed!\n\nScore: ${result.score}\n\n${result.evidence?.join('\n') || 'Well done!'}`);
+          alert(`Success! Level Completed!\n\nScore: ${result.score}\n\n${result.evidence?.join('\n') || 'Well done!'}`);
         } else {
           // Failed
           const failureMessage = result.evidence?.join('\n') || 'Your solution did not meet the requirements.';
-          alert(`❌ Level Not Passed\n\nScore: ${result.score}\nVerdict: ${result.verdict}\n\n${failureMessage}\n\nTry again with a different approach!`);
+          alert(`Level Not Passed\n\nScore: ${result.score}\nVerdict: ${result.verdict}\n\n${failureMessage}\n\nTry again with a different approach!`);
         }
     } else {
         alert('Failed to evaluate attack. Please try again.');
@@ -569,9 +553,9 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
       {/* Center Panel */}
       <div className="flex-1 flex flex-col p-4">
     <div className="mb-4">
-      <button onClick={() => setView('chat')} className={`mr-2 py-2 px-4 rounded ${view === 'chat' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>💬 Chat</button>
+      <button onClick={() => setView('chat')} className={`mr-2 py-2 px-4 rounded ${view === 'chat' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>Chat</button>
       {level.allowsFiles && (
-        <button onClick={() => setView('files')} className={`py-2 px-4 rounded ${view === 'files' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>📁 File Explorer</button>
+        <button onClick={() => setView('files')} className={`py-2 px-4 rounded ${view === 'files' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>File Explorer</button>
       )}
     </div>
     {view === 'chat' ? (
@@ -611,7 +595,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                   onClick={() => { playClick(); handleSendMessage(); }}
           disabled={isLoading || !user}
         >
-          {isLoading ? '⏳ Thinking...' : !user ? '🔒 Sign in to chat' : '➤ Send'}
+          {isLoading ? 'Thinking...' : !user ? 'Sign in to chat' : 'Send'}
         </button>
                 </div>
             </>
@@ -688,32 +672,9 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                   : 'bg-yellow-500 hover:bg-yellow-600 text-gray-900'
               }`}
             >
-              {!user ? '🔒 Sign in to submit' : 'Submit for Judging'}
+              {!user ? 'Sign in to submit' : 'Submit for Judging'}
             </button>
         </div>
-        {user && (
-          <div className="mt-4">
-            <button 
-              onClick={async () => {
-                try {
-                  const res = await fetch('/api/debug/session', {
-                    headers: {
-                      'Authorization': `Bearer ${session?.access_token}`,
-                    }
-                  });
-                  const data = await res.json();
-                  console.log('Session debug:', data);
-                  alert('Check console for session debug info');
-                } catch (e) {
-                  console.error('Session debug error:', e);
-                }
-              }}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-            >
-              Debug Session
-            </button>
-          </div>
-        )}
         {isAdmin && (
             <div className="mt-8">
                 <h2 className="text-xl font-bold mb-4 text-green-400">Internal Logs</h2>

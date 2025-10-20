@@ -62,15 +62,8 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   useEffect(() => {
     const fetchProgress = async () => {
       if (!user) {
-        console.log('[frontend] no user, skipping progress fetch');
         return;
       }
-      
-      console.log('[frontend] fetching progress for user:', { 
-        hasAccessToken: !!session?.access_token, 
-        tokenLength: session?.access_token?.length,
-        userId: user.id 
-      });
       
       try {
         const res = await fetch('/api/user/progress', {
@@ -80,7 +73,6 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
         });
         if (res.ok) {
           const data = await res.json();
-          console.log('[frontend] progress data received:', data);
           try {
             // Update completed levels based on non-zero scores from leaderboard
             const newCompletedLevels = data.completedLevels || [];
@@ -104,11 +96,9 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
           } catch {
             // ignore local merge errors
           }
-        } else {
-          console.log('[frontend] progress fetch failed:', res.status, res.statusText);
         }
       } catch (error) {
-        console.log('[frontend] progress fetch error:', error);
+        // Silent fallback
       }
     }
     fetchProgress();

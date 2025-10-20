@@ -7,21 +7,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  console.log('[user/stats] API called');
-
   try {
     // Try cookie-based session first
     const supabaseServer = createPagesServerClient({ req, res });
     const { data: sessionData, error: sessErr } = await supabaseServer.auth.getSession();
     let user = sessionData.session?.user;
     
-    console.log('[user/stats] cookie session:', { hasUser: !!user, error: sessErr?.message });
-    
     if (sessErr || !user) {
       // Fallback: accept Authorization: Bearer <access_token>
       const authHeader = req.headers.authorization;
-      console.log('[user/stats] checking auth header:', { hasHeader: !!authHeader, startsWithBearer: authHeader?.startsWith('Bearer ') });
-      
       if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.slice(7);
         const svc = getSupabaseServiceClient();
@@ -30,19 +24,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const { data: tokenUser, error } = await svc.auth.getUser(token);
             if (!error && tokenUser?.user) {
               user = tokenUser.user;
-              console.log('[user/stats] bearer token auth successful:', { userId: user.id });
-            } else {
-              console.log('[user/stats] bearer token auth failed:', { error: error?.message });
             }
           } catch (e) {
-            console.log('[user/stats] bearer token error:', e);
+            // Silent fallback
           }
         }
       }
     }
     
     if (!user) {
-      console.log('[user/stats] no user found, returning 401');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -58,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('user_id', user.id);
 
     if (error) {
-      console.error('[user/stats] Error fetching leaderboard entries:', error);
+      console.error('Error fetching leaderboard entries:', error);
       return res.status(500).json({ error: 'Database error' });
     }
 
@@ -81,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
   } catch (error) {
-    console.error('[user/stats] Error in user stats API:', error);
+    console.error('Error in user stats API:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
