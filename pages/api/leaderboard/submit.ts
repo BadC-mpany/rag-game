@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existingEntry, error: fetchError } = await supabase
       .from('leaderboard')
-      .select('score, current_level')
+      .select('score')
       .eq('user_id', user.id)
       .eq('level_id', levelId)
       .single();
@@ -69,21 +69,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const newScore = Math.max(Number(existingEntry?.score) || 0, Number(score) || 0);
     
-    // Calculate new current_level: if this is a new completion (score > 0), update current_level
-    let newCurrentLevel = existingEntry?.current_level || 1;
-    if (newScore > 0) {
-      // Handle both numeric level IDs (1, 2, etc.) and legacy level-001 format
-      const levelNumber = levelId.startsWith('level-') 
-        ? parseInt(levelId.replace('level-', '')) 
-        : parseInt(levelId);
-      newCurrentLevel = Math.max(newCurrentLevel, levelNumber);
-    }
-    
     const { error: updateError } = await supabase
       .from('leaderboard')
       .update({ 
         score: newScore, 
-        current_level: newCurrentLevel,
         timestamp: new Date().toISOString() 
       })
       .eq('user_id', user.id)

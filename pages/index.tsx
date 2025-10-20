@@ -49,19 +49,35 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   });
   
   const [currentLevel, setCurrentLevel] = useState<number>(1);
+  const [isClient, setIsClient] = useState(false);
   const { user, session } = useAuth();
 
   // Hydration flag: avoid rendering level availability on the server to prevent
   // flicker/hydration mismatch with client-localStorage-derived state.
   const [hydrated, setHydrated] = useState<boolean>(false);
-  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => { 
+    setHydrated(true);
+    setIsClient(true);
+  }, []);
 
   // completedLevels and levelScores are initialized synchronously from localStorage to avoid UI flicker.
+
+  // Load cached values on client side
+  useEffect(() => {
+    if (isClient) {
+      try {
+        const cachedCurrentLevel = localStorage.getItem('cachedCurrentLevel');
+        if (cachedCurrentLevel) {
+          setCurrentLevel(parseInt(cachedCurrentLevel));
+        }
+      } catch { }
+    }
+  }, [isClient]);
 
   // Fetch server progress when user is signed in and merge into localStorage
   useEffect(() => {
     const fetchProgress = async () => {
-      if (!user) {
+      if (!user || !isClient) {
         return;
       }
       
@@ -79,8 +95,10 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
             localStorage.setItem('completedLevels', JSON.stringify(newCompletedLevels));
             setCompletedLevels(newCompletedLevels);
 
-            // Update current level
-            setCurrentLevel(data.currentLevel || 1);
+            // Update current level (only if different from cached)
+            const newCurrentLevel = data.currentLevel || 1;
+            setCurrentLevel(newCurrentLevel);
+            localStorage.setItem('cachedCurrentLevel', newCurrentLevel.toString());
 
             // Update level scores from leaderboard entries
             const scores: Record<string, number> = {};
@@ -102,7 +120,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
       }
     }
     fetchProgress();
-  }, [user]);
+  }, [user, isClient]);
 
   // note: level completion is handled by the judge flow in play/[level].tsx
 
@@ -194,7 +212,15 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                               </div>
                               <div>
                                 {isUnlocked ? (
-                                  <Link href={`/play/${level.id}`} onClick={() => playClick()} className="inline-block bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-4 rounded hover:brightness-110 transition-all btn-press">
+                                  <Link 
+                                    href={`/play/${level.id}`} 
+                                    onClick={() => playClick()} 
+                                    className={`inline-block font-bold py-2 px-4 rounded transition-all btn-press ${
+                                      thisLevelCompleted 
+                                        ? 'bg-transparent border-2 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white' 
+                                        : 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 hover:brightness-110'
+                                    }`}
+                                  >
                                     {thisLevelCompleted ? 'Replay' : 'Play Now'}
                                   </Link>
                                 ) : (
