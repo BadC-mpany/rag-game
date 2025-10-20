@@ -151,29 +151,38 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                       {/* Render levels only on the client to ensure availability is computed
                           from synchronous localStorage reads and avoid hydration flips. */}
                       {hydrated ? (() => {
-                        // Determine unlocked status per-level deterministically
-                        const isUnlocked = (lvl: Level) => lvl.unlockedBy === null || completedLevels.includes(lvl.unlockedBy as string);
-                        let lastUnlockedIndex = -1;
-                        for (let i = 0; i < levels.length; i++) {
-                          if (isUnlocked(levels[i])) lastUnlockedIndex = i;
-                        }
-
+                        // Simple sequential unlock: level N unlocks if level N-1 is completed (or it's level 1)
+                        // Users can replay any unlocked level
                         return levels.map((level, idx) => {
-                          const locked = !isAdmin && !isUnlocked(level);
-                          const showPlay = isAdmin || idx === lastUnlockedIndex;
+                          // Level is unlocked if:
+                          // 1. It's the first level (idx === 0), OR
+                          // 2. Previous level is completed, OR
+                          // 3. This level is already completed (can replay), OR
+                          // 4. Admin mode is on
+                          const prevLevelCompleted = idx === 0 || completedLevels.includes(levels[idx - 1].id);
+                          const thisLevelCompleted = completedLevels.includes(level.id);
+                          const isUnlocked = isAdmin || prevLevelCompleted || thisLevelCompleted;
+                          
                           return (
-                            <div key={level.id} className={`flex items-center gap-4 ${locked ? 'opacity-60' : ''} bg-gray-900 p-3 rounded border border-gray-800`}>
+                            <div key={level.id} className={`flex items-center gap-4 ${!isUnlocked ? 'opacity-60' : ''} bg-gray-900 p-3 rounded border border-gray-800`}>
                               <div className="flex-1">
                                 <div className="flex items-center justify-between">
                                   <div>
-                                    <div className="text-sm text-gray-300 flex items-center gap-2"><FiAlertCircle className="text-yellow-300" />{level.title} <span className="text-xs text-yellow-300 ml-2">{level.singleTurn ? 'Single-turn' : 'Multi-turn'}</span></div>
+                                    <div className="text-sm text-gray-300 flex items-center gap-2">
+                                      <FiAlertCircle className="text-yellow-300" />
+                                      {level.title} 
+                                      <span className="text-xs text-yellow-300 ml-2">{level.singleTurn ? 'Single-turn' : 'Multi-turn'}</span>
+                                      {thisLevelCompleted && <span className="text-xs text-green-400 ml-2">✓ Completed</span>}
+                                    </div>
                                     <div className="text-xs text-gray-500">{level.description}</div>
                                   </div>
                                 </div>
                               </div>
                               <div>
-                                {showPlay ? (
-                                  <Link href={`/play/${level.id}`} onClick={() => playClick()} className="inline-block bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-4 rounded hover:brightness-110 transition-all btn-press">Play Now</Link>
+                                {isUnlocked ? (
+                                  <Link href={`/play/${level.id}`} onClick={() => playClick()} className="inline-block bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-4 rounded hover:brightness-110 transition-all btn-press">
+                                    {thisLevelCompleted ? 'Replay' : 'Play Now'}
+                                  </Link>
                                 ) : (
                                   <button className="inline-block bg-gray-700 text-gray-300 font-semibold py-2 px-3 rounded cursor-not-allowed">Locked</button>
                                 )}

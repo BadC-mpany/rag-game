@@ -81,6 +81,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -342,28 +343,33 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   };
 
   const handleSubmitToLeaderboard = async (score: number) => {
-  let name = undefined as string | undefined;
-  if (!session) {
-    // prompt for display name when anonymous
-    // eslint-disable-next-line no-alert
-    name = window.prompt('Enter display name for leaderboard (or leave blank to stay anonymous):') || undefined;
-  }
+    if (!session) {
+      // User not authenticated, skip leaderboard submission
+      return;
+    }
 
-  const body: { levelId: string; score: number; name?: string } = { levelId: level.id, score };
-  if (name) body.name = name;
+    try {
+      const res = await fetch('/api/leaderboard/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          levelId: level.id, 
+          score: score 
+        }),
+      });
 
-  const res = await fetch('/api/leaderboard', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-
-    if (res.ok) {
-        alert('Score submitted to leaderboard!');
-    } else {
-        alert('Failed to submit score. Are you signed in?');
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Score submitted:', data);
+      } else {
+        const errorData = await res.json();
+        console.error('Failed to submit score:', errorData);
+      }
+    } catch (error) {
+      console.error('Error submitting to leaderboard:', error);
     }
   }
 
@@ -389,66 +395,65 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
 
     if (res.ok) {
         const result = await res.json();
-        const submitMessage = `Judging complete!\nScore: ${result.score}\nVerdict: ${result.verdict}`;
         
-        // store per-level score locally
-        try {
-          const rawScores = localStorage.getItem('levelScores');
-          const scores = rawScores ? JSON.parse(rawScores) : {};
-          scores[level.id] = Math.max(scores[level.id] || 0, result.score);
-          localStorage.setItem('levelScores', JSON.stringify(scores));
-        } catch (error) {
-          console.error('Failed to store score:', error);
-        }
-
-        if (user) {
-          // auto-submit to global leaderboard if signed in
-          handleSubmitToLeaderboard(result.score);
-        } else {
-          alert(`${submitMessage}\n\nSign in to submit your score to the leaderboard.`);
-        }
-        
-        // If judged successful, mark level complete so next level unlocks (client-side)
-        if (result.verdict === 'success') {
-          const isNewCompletion = (() => {
-            try {
-              const raw = localStorage.getItem('completedLevels');
-              const arr = raw ? JSON.parse(raw) : [];
-              const wasAlreadyCompleted = arr.includes(level.id);
-              if (!wasAlreadyCompleted) {
-                arr.push(level.id);
-                localStorage.setItem('completedLevels', JSON.stringify(arr));
-              }
-              return !wasAlreadyCompleted;
-            } catch {
-              return false;
-            }
-          })();
-
-          // Update user progress in Supabase if authenticated and it's a new completion
-          if (user && isNewCompletion) {
-            updateUserProgress(result.score, true).catch(console.error);
-          }
-          
-          // Also post progress to server so it's persisted
+        // Check if level was already completed
+        const wasAlreadyCompleted = (() => {
           try {
+            const raw = localStorage.getItem('completedLevels');
+            const arr = raw ? JSON.parse(raw) : [];
+            return arr.includes(level.id);
+          } catch {
+            return false;
+          }
+        })();
+
+        // If judged successful
+        if (result.verdict === 'success') {
+          // Show animated success overlay
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 1600);
+          
+          if (wasAlreadyCompleted) {
+            alert(`Level already completed!\n\nYou previously passed this level. Your original score stands.`);
+            return;
+          }
+
+          // Mark level as completed
+          try {
+            const raw = localStorage.getItem('completedLevels');
+            const arr = raw ? JSON.parse(raw) : [];
+            arr.push(level.id);
+            localStorage.setItem('completedLevels', JSON.stringify(arr));
+            
+            // Store score
             const rawScores = localStorage.getItem('levelScores');
             const scores = rawScores ? JSON.parse(rawScores) : {};
-            const rawCompleted = localStorage.getItem('completedLevels');
-            const completed = rawCompleted ? JSON.parse(rawCompleted) : [];
-            if (user) {
-              await fetch('/api/progress', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ completedLevels: completed, levelScores: scores }),
-              });
-            }
+            scores[level.id] = result.score;
+            localStorage.setItem('levelScores', JSON.stringify(scores));
           } catch (error) {
-            console.error('Failed to post progress:', error);
+            console.error('Failed to store completion:', error);
           }
+
+          // Submit to leaderboard if authenticated
+          if (user) {
+            await handleSubmitToLeaderboard(result.score);
+            
+            // Update user progress in Supabase
+            try {
+              await updateUserProgress(result.score, true);
+            } catch (error) {
+              console.error('Failed to update user progress:', error);
+            }
+          }
+
+          alert(`🎉 Success! Level Completed!\n\nScore: ${result.score}\n\n${result.evidence?.join('\n') || 'Well done!'}`);
+        } else {
+          // Failed
+          const failureMessage = result.evidence?.join('\n') || 'Your solution did not meet the requirements.';
+          alert(`❌ Level Not Passed\n\nScore: ${result.score}\nVerdict: ${result.verdict}\n\n${failureMessage}\n\nTry again with a different approach!`);
         }
     } else {
-        alert('Failed to evaluate attack.');
+        alert('Failed to evaluate attack. Please try again.');
     }
   }
 
@@ -458,6 +463,23 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
 
   return (
   <div className="flex h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-gray-900 text-white font-mono">
+    {/* Success Overlay */}
+    {showSuccess && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 bg-black/60 animate-fade-in" />
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="w-28 h-28 rounded-full bg-green-500 shadow-lg flex items-center justify-center animate-[pop_300ms_ease-out]">
+            <svg viewBox="0 0 24 24" className="w-14 h-14 text-gray-900">
+              <path fill="currentColor" d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z" />
+            </svg>
+          </div>
+          <div className="mt-3 text-green-400 font-bold tracking-wide">Success</div>
+        </div>
+        <style jsx>{`
+          @keyframes pop { from { transform: scale(0.6); opacity: .6 } to { transform: scale(1); opacity: 1 } }
+        `}</style>
+      </div>
+    )}
     {/* Left Panel */}
   <div className="w-1/5 bg-gray-800 p-4 border-r border-gray-700 flex flex-col overflow-y-auto">
         <div className="mb-2">
@@ -517,14 +539,20 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                 <div ref={messagesEndRef} />
                 </div>
                 <div className="flex">
-        <input
-          type="text"
-          className="flex-1 bg-gray-800 rounded-l-md p-2 focus:outline-none text-white focus:ring-2 focus:ring-green-400 border border-gray-700"
+        <textarea
+          rows={1}
+          className="flex-1 bg-gray-800 rounded-l-md p-2 focus:outline-none text-white focus:ring-2 focus:ring-green-400 border border-gray-700 resize-none"
           placeholder={!user ? "Sign in to send messages..." : "Type your message..."}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && !isLoading && user && handleSendMessage()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !isLoading && user) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
           disabled={isLoading || !user}
+          style={{ minHeight: '2.5rem', maxHeight: '10rem', overflow: 'auto' }}
         />
                 <button
           className={`font-bold py-2 px-4 rounded-r-md shadow-sm transition-all ${
@@ -602,64 +630,6 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
             </div>
           )}
         </div>
-                {/* Start Attack button for multi-action levels */}
-                {(level.singleTurn || level.allowsFiles) && (
-                  <div className="mt-3">
-                    <button className="hidden" onClick={async () => {
-                      const userMessage: Message = { role: 'attacker', content: input };
-                      // prepare action payload
-                      // build payload with one-time file prepend similar to chat
-                      let payloadMessage = userMessage;
-                      const shouldAlwaysPrepend = !!level.singleTurn;
-                      if ((shouldAlwaysPrepend || !filesPrepended) && (committedState || []).length > 0) {
-                        const textFiles = (committedState || []).filter(f => {
-                          const lower = f.name.toLowerCase();
-                          const binaryExt = ['.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'];
-                          return !binaryExt.some(ext => lower.endsWith(ext));
-                        });
-                        if (textFiles.length > 0) {
-                          let fileBlock = 'FILE CONTENTS:\n';
-                          for (const f of textFiles) {
-                            fileBlock += `--- ${f.name} ---\n${f.content}\n\n`;
-                          }
-                          payloadMessage = { ...userMessage, content: `${fileBlock}\nUSER MESSAGE:\n${userMessage.content}` };
-                          if (!shouldAlwaysPrepend) setFilesPrepended(true);
-                        }
-                      }
-
-                      const actionPayload = { sessionId, levelId: level.id, message: payloadMessage, files: committedState, isAdmin: isAdmin, action: 'startAttack', singleTurn: !!level.singleTurn };
-
-                      // update messages for single-turn: restart conversation
-                      if (level.singleTurn) {
-                        const preserved = messages.filter(m => m.role !== 'attacker' && m.role !== 'assistant');
-                        setMessages([...preserved, userMessage]);
-                      } else {
-                        setMessages(prev => [...prev, userMessage]);
-                      }
-
-                      const res = await fetch('/api/agent/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(actionPayload) });
-                      if (res.ok) {
-                        const data = await res.json();
-                        const agentMessage: Message = { role: 'assistant', content: data.reply, internalLogs: data.internalLogs };
-                        if (level.singleTurn) {
-                          const preserved = messages.filter(m => m.role !== 'attacker' && m.role !== 'assistant');
-                          setMessages([...preserved, userMessage, agentMessage]);
-                        } else {
-                          setMessages(prev => [...prev, agentMessage]);
-                        }
-                        if (data.stats) setStats(data.stats);
-                        if (data.score) {
-                          try {
-                            const rawScores = localStorage.getItem('levelScores');
-                            const scores = rawScores ? JSON.parse(rawScores) : {};
-                            scores[level.id] = Math.max(scores[level.id] || 0, data.score);
-                            localStorage.setItem('levelScores', JSON.stringify(scores));
-                          } catch {}
-                        }
-                      }
-                    }} className="mt-2 bg-purple-600 hover:bg-purple-500 text-white py-2 px-4 rounded">{level.singleTurn ? 'Submit move' : 'Start Attack'}</button>
-                  </div>
-                )}
         <div className="mt-8">
             <button 
               onClick={handleJudge} 

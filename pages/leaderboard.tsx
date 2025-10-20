@@ -4,10 +4,11 @@ import Auth from '../components/Auth';
 import Sidebar from '../components/Sidebar';
 
 interface LeaderboardEntry {
-  rank: number;
   name: string;
   score: number;
+  level_id: string;
   timestamp: string;
+  email?: string;
 }
 
 const LeaderboardPage: NextPage = () => {
@@ -21,7 +22,7 @@ const LeaderboardPage: NextPage = () => {
         const res = await fetch('/api/leaderboard?levelId=level-001');
         if (res.ok) {
           const data = await res.json();
-          setLeaderboard(data);
+          setLeaderboard(data.leaderboard || []);
         } else {
           setError('Failed to fetch leaderboard.');
         }
@@ -99,7 +100,7 @@ const LeaderboardPage: NextPage = () => {
                   <tbody>
                     {leaderboard.map((entry, index) => (
                       <tr key={index} className="border-t border-gray-700 hover:bg-gray-700 transition-all duration-200">
-                        <td className="p-2">{entry.rank}</td>
+                        <td className="p-2">{index + 1}</td>
                         <td className="p-2">{entry.name}</td>
                         <td className="p-2">{entry.score}</td>
                         <td className="p-2">{new Date(entry.timestamp).toLocaleString()}</td>
