@@ -460,7 +460,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                 localStorage.setItem('completedLevels', JSON.stringify(progressData.completedLevels || []));
                 const scores: Record<string, number> = {};
                 if (progressData.leaderboardEntries) {
-                  progressData.leaderboardEntries.forEach((entry: any) => {
+                  progressData.leaderboardEntries.forEach((entry: { level_id: string; score: number }) => {
                     if (entry.score > 0) {
                       scores[entry.level_id] = entry.score;
                     }
@@ -468,13 +468,14 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                 }
                 localStorage.setItem('levelScores', JSON.stringify(scores));
               }
-            } catch (error) {
-              console.error('Failed to refresh user progress:', error);
+            } catch {
+              console.error('Failed to refresh user progress');
             }
             
             // Refresh sidebar stats (force refresh since score increased)
-            if ((window as any).refreshUserStats) {
-              (window as any).refreshUserStats();
+            const refreshFn = (window as { refreshUserStats?: () => void }).refreshUserStats;
+            if (refreshFn) {
+              refreshFn();
             }
           }
 

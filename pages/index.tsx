@@ -40,7 +40,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
     } catch { return []; }
   });
 
-  const [levelScores, setLevelScores] = useState<Record<string, number>>(() => {
+  const [, setLevelScores] = useState<Record<string, number>>(() => {
     if (typeof window === 'undefined') return {};
     try {
       const rawScores = localStorage.getItem('levelScores');
@@ -103,7 +103,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
             // Update level scores from leaderboard entries
             const scores: Record<string, number> = {};
             if (data.leaderboardEntries) {
-              data.leaderboardEntries.forEach((entry: any) => {
+              data.leaderboardEntries.forEach((entry: { level_id: string; score: number }) => {
                 if (entry.score > 0) {
                   scores[entry.level_id] = entry.score;
                 }
@@ -115,12 +115,12 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
             // ignore local merge errors
           }
         }
-      } catch (error) {
+      } catch {
         // Silent fallback
       }
     }
     fetchProgress();
-  }, [user, isClient]);
+  }, [user, isClient, session?.access_token]);
 
   // note: level completion is handled by the judge flow in play/[level].tsx
 

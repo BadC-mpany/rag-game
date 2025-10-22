@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { FaShareAlt } from 'react-icons/fa';
 import ShareModal from './ShareModal';
@@ -40,7 +40,7 @@ export default function Sidebar() {
     }
   };
 
-  const fetchUserStats = async (forceRefresh = false) => {
+  const fetchUserStats = useCallback(async (forceRefresh = false) => {
     if (!user) return;
     
     // Check if we have cached data and don't need to refresh
@@ -83,7 +83,7 @@ export default function Sidebar() {
           setTotalScore(total);
         } catch { }
       }
-    } catch (error) {
+    } catch {
       // Fallback to localStorage for existing users
       try {
         const rawScores = localStorage.getItem('levelScores');
@@ -92,7 +92,7 @@ export default function Sidebar() {
         setTotalScore(total);
       } catch { }
     }
-  };
+  }, [user, session?.access_token]);
 
   useEffect(() => {
     setIsClient(true);
@@ -114,15 +114,15 @@ export default function Sidebar() {
     if (isClient) {
       fetchUserStats();
     }
-  }, [user, isClient]);
+  }, [user, isClient, fetchUserStats]);
 
   // Expose refresh function globally so other components can call it
   useEffect(() => {
-    (window as any).refreshUserStats = () => fetchUserStats(true); // Force refresh when called from other components
+    (window as { refreshUserStats?: () => void }).refreshUserStats = () => fetchUserStats(true); // Force refresh when called from other components
     return () => {
-      delete (window as any).refreshUserStats;
+      delete (window as { refreshUserStats?: () => void }).refreshUserStats;
     };
-  }, [user, session]);
+  }, [fetchUserStats]);
 
   return (
     <aside className={`w-64 bg-gray-800 bg-opacity-40 backdrop-blur-md p-4 rounded-lg border border-gray-700 flex-col hidden md:flex ${sidebarOpen ? '' : 'hidden'}`}>
