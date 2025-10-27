@@ -32,21 +32,8 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   // `getAdminMode()` reads localStorage and is applied on the client in an effect below.
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  const [completedLevels, setCompletedLevels] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem('completedLevels');
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-  });
-
-  const [, setLevelScores] = useState<Record<string, number>>(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      const rawScores = localStorage.getItem('levelScores');
-      return rawScores ? JSON.parse(rawScores) : {};
-    } catch { return {}; }
-  });
+  const [completedLevels, setCompletedLevels] = useState<string[]>([]);
+  const [levelScores, setLevelScores] = useState<Record<string, number>>({});
   
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [isClient, setIsClient] = useState(false);
@@ -66,11 +53,26 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   useEffect(() => {
     if (isClient) {
       try {
+        // Load completed levels
+        const raw = localStorage.getItem('completedLevels');
+        if (raw) {
+          setCompletedLevels(JSON.parse(raw));
+        }
+        
+        // Load level scores
+        const rawScores = localStorage.getItem('levelScores');
+        if (rawScores) {
+          setLevelScores(JSON.parse(rawScores));
+        }
+        
+        // Load current level
         const cachedCurrentLevel = localStorage.getItem('cachedCurrentLevel');
         if (cachedCurrentLevel) {
           setCurrentLevel(parseInt(cachedCurrentLevel));
         }
-      } catch { }
+      } catch { 
+        // Ignore localStorage errors
+      }
     }
   }, [isClient]);
 
