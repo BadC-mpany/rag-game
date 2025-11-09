@@ -1,6 +1,7 @@
 import type { NextPage } from 'next';
-import Image from 'next/image';
+import React from 'react';
 import Sidebar from '../components/Sidebar';
+import NewsletterSignup from '../components/NewsletterSignup';
 
 const Contact: NextPage = () => {
   return (
@@ -9,12 +10,11 @@ const Contact: NextPage = () => {
         <div className="flex gap-8">
           <Sidebar />
           <div className="flex-1 max-w-3xl bg-gray-800 p-8 rounded-lg border border-gray-700 animate-fade-in">
-            <div className="flex items-center gap-4">
-              <Image src="/badcompany_logo1.jpg" alt="BadCompany Logo" width={56} height={56} className="rounded" />
-              <h1 className="text-2xl font-bold text-green-400">Contact</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-green-400 mb-6">Contact</h1>
             </div>
 
-            <div className="mt-6 text-gray-300">
+            <div className="mt-6 text-gray-300 mb-8">
               <p>For inquiries, bug reports, or collaboration, reach out:</p>
               <ul className="mt-4 space-y-3">
                 <li className="flex items-center gap-2">
@@ -29,6 +29,10 @@ const Contact: NextPage = () => {
                   <a href="https://discord.gg/mu5QZ98A" target="_blank" rel="noreferrer" className="text-purple-400 hover:text-purple-300">Join our Discord</a>
                 </li>
               </ul>
+            </div>
+
+            <div>
+              <NewsletterSignup />
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@ import React from 'react';
 const ShareModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   if (!open) return null;
   const url = typeof window !== 'undefined' ? window.location.href : '';
-  const shareText = encodeURIComponent('Play Badcompany - a retro LLM hacking game');
+  const shareText = encodeURIComponent('Play Badcompany - try hacking realistic AI agents!');
   const xShare = `https://twitter.com/intent/tweet?text=${shareText}&url=${encodeURIComponent(url)}`;
   const linkedinShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
 
