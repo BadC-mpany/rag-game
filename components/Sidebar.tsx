@@ -127,13 +127,13 @@ export default function Sidebar() {
   return (
     <aside className={`w-64 bg-gray-800 bg-opacity-40 backdrop-blur-md p-4 rounded-lg border border-gray-700 flex-col hidden md:flex ${sidebarOpen ? '' : 'hidden'}`}>
       <div className="mb-6">
-        <div className="flex items-center space-x-3">
-          <Image src="/badcompany_logo1.jpg" alt="BadCompany Logo" width={44} height={44} className="rounded" />
+        <a href="https://www.badcompany.xyz/" target="_blank" rel="noreferrer" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+          <Image src="/badcompany_logo1_nobkg.png" alt="BadCompany Logo" width={44} height={44} />
           <div>
             <h1 className="text-2xl font-bold text-green-400">Badcompany</h1>
             <p className="text-xs text-gray-400">Hone your red-team skills</p>
           </div>
-        </div>
+        </a>
       </div>
 
       <div className="mb-4">

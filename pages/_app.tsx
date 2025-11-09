@@ -8,7 +8,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <AuthProvider>
       <Head>
         {/* Favicon shown in browser tab - file placed in /public */}
-        <link rel="icon" href="/badcompany_logo1.jpg" />
+        <link rel="icon" href="/badcompany_logo1_nobkg.png" />
         <meta name="theme-color" content="#0f172a" />
       </Head>
       <Component {...pageProps} />
