@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { unstable_getServerSession } from 'next-auth/next';
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
+import { getSupabaseServiceClient } from '../../lib/supabase';
 
 // Try to load Vercel KV if available, otherwise fallback to in-memory store.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,17 +21,53 @@ const inMemoryProgress: Record<string, ProgressData> = {};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const method = req.method;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const session = await (unstable_getServerSession as any)(req, res, {});
+  // Try cookie-based session first
+  const supabaseServer = createPagesServerClient({ req, res });
+  const { data: sessionData, error: sessErr } = await supabaseServer.auth.getSession();
+  let userId: string | null = null;
+  let userEmail: string | null = null;
+  
+  if (!sessErr && sessionData.session?.user) {
+    userId = sessionData.session.user.id as string;
+    userEmail = sessionData.session.user.email as string | null;
+    console.log('[progress] cookie session found', { userId, userEmail });
+  } else {
+    console.log('[progress] no cookie session', { sessErr });
+  }
 
-  if (!session) {
+  // Fallback: accept Authorization: Bearer <access_token>
+  if (!userId) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const svc = getSupabaseServiceClient();
+      if (svc) {
+        try {
+          const { data: tokenUser, error } = await svc.auth.getUser(token);
+          if (!error && tokenUser?.user) {
+            userId = tokenUser.user.id;
+            userEmail = tokenUser.user.email ?? null;
+            console.log('[progress] bearer token session found', { userId, userEmail });
+          }
+        } catch (e) {
+          console.log('[progress] bearer token error', e);
+        }
+      }
+    }
+  }
+
+  if (!userId) {
+    // eslint-disable-next-line no-console
+    console.warn('[progress] unauthorized', { sessErr });
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Identify the user key. Prefer stable identifier like email, fall back to name.
-  const userKey = (session.user?.email || session.user?.id || session.user?.name || 'unknown').toString();
+  // Identify the user key. Prefer UUID, then email
+  const userKey = (userId || userEmail || 'unknown').toString();
 
   if (method === 'GET') {
+    // eslint-disable-next-line no-console
+    console.log('[progress] GET', { userKey });
     if (kv && kv.kv) {
       const raw = await kv.kv.get(`progress:user:${userKey}`);
       const data = raw ? JSON.parse(raw) : { completedLevels: [], levelScores: {} };
@@ -42,6 +79,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (method === 'POST') {
+    // eslint-disable-next-line no-console
+    console.log('[progress] POST incoming');
     const body = req.body || {};
     const incoming: Partial<ProgressData> = {
       completedLevels: Array.isArray(body.completedLevels) ? body.completedLevels : undefined,
@@ -77,6 +116,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       inMemoryProgress[userKey] = toStore;
     }
 
+    // eslint-disable-next-line no-console
+    console.log('[progress] stored', { completed: toStore.completedLevels.length, scores: Object.keys(toStore.levelScores).length });
     return res.status(200).json(toStore);
   }
 

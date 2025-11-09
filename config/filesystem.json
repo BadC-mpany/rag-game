@@ -1,5 +1,5 @@
 {
-  "level-002": {
+  "2": {
     "files": [
       {
         "name": "confidential_api_keys.txt",
@@ -8,7 +8,7 @@
       }
     ]
   },
-  "level-004": {
+  "4": {
     "files": [
       {
         "name": "project_phoenix_summary.txt",
@@ -22,7 +22,7 @@
       }
     ]
   },
-  "level-005": {
+  "5": {
     "files": [
       {
         "name": "intern_onboarding.txt",
@@ -36,7 +36,7 @@
       }
     ]
   },
-  "level-006": {
+  "6": {
     "files": [
       {
         "name": "TASK.md",
@@ -55,7 +55,7 @@
       }
     ]
   },
-  "level-007": {
+  "7": {
     "files": [
       {
         "name": "meeting_transcript.txt",
@@ -64,7 +64,7 @@
       }
     ]
   },
-  "level-008": {
+  "8": {
     "files": [
       {
         "name": "new_hire_orientation_plan.txt",

@@ -344,17 +344,19 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
 
   const handleSubmitToLeaderboard = async (score: number) => {
     if (!session) {
-      // User not authenticated, skip leaderboard submission
       return;
     }
 
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      };
+      
       const res = await fetch('/api/leaderboard/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ 
           levelId: level.id, 
           score: score 
@@ -444,13 +446,44 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
             } catch (error) {
               console.error('Failed to update user progress:', error);
             }
+            
+            // Refresh user progress to update current level and completed levels
+            try {
+              const progressRes = await fetch('/api/user/progress', {
+                headers: {
+                  'Authorization': `Bearer ${session?.access_token}`,
+                }
+              });
+              if (progressRes.ok) {
+                const progressData = await progressRes.json();
+                // Update localStorage with fresh data
+                localStorage.setItem('completedLevels', JSON.stringify(progressData.completedLevels || []));
+                const scores: Record<string, number> = {};
+                if (progressData.leaderboardEntries) {
+                  progressData.leaderboardEntries.forEach((entry: { level_id: string; score: number }) => {
+                    if (entry.score > 0) {
+                      scores[entry.level_id] = entry.score;
+                    }
+                  });
+                }
+                localStorage.setItem('levelScores', JSON.stringify(scores));
+              }
+            } catch {
+              console.error('Failed to refresh user progress');
+            }
+            
+            // Refresh sidebar stats (force refresh since score increased)
+            const refreshFn = (window as { refreshUserStats?: () => void }).refreshUserStats;
+            if (refreshFn) {
+              refreshFn();
+            }
           }
 
-          alert(`🎉 Success! Level Completed!\n\nScore: ${result.score}\n\n${result.evidence?.join('\n') || 'Well done!'}`);
+          alert(`Success! Level Completed!\n\nScore: ${result.score}\n\n${result.evidence?.join('\n') || 'Well done!'}`);
         } else {
           // Failed
           const failureMessage = result.evidence?.join('\n') || 'Your solution did not meet the requirements.';
-          alert(`❌ Level Not Passed\n\nScore: ${result.score}\nVerdict: ${result.verdict}\n\n${failureMessage}\n\nTry again with a different approach!`);
+          alert(`Level Not Passed\n\nScore: ${result.score}\nVerdict: ${result.verdict}\n\n${failureMessage}\n\nTry again with a different approach!`);
         }
     } else {
         alert('Failed to evaluate attack. Please try again.');
@@ -521,9 +554,9 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
       {/* Center Panel */}
       <div className="flex-1 flex flex-col p-4">
     <div className="mb-4">
-      <button onClick={() => setView('chat')} className={`mr-2 py-2 px-4 rounded ${view === 'chat' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>💬 Chat</button>
+      <button onClick={() => setView('chat')} className={`mr-2 py-2 px-4 rounded ${view === 'chat' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>Chat</button>
       {level.allowsFiles && (
-        <button onClick={() => setView('files')} className={`py-2 px-4 rounded ${view === 'files' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>📁 File Explorer</button>
+        <button onClick={() => setView('files')} className={`py-2 px-4 rounded ${view === 'files' ? 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 shadow-sm' : 'bg-gray-700 hover:bg-gray-600'}`}>File Explorer</button>
       )}
     </div>
     {view === 'chat' ? (
@@ -563,7 +596,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                   onClick={() => { playClick(); handleSendMessage(); }}
           disabled={isLoading || !user}
         >
-          {isLoading ? '⏳ Thinking...' : !user ? '🔒 Sign in to chat' : '➤ Send'}
+          {isLoading ? 'Thinking...' : !user ? 'Sign in to chat' : 'Send'}
         </button>
                 </div>
             </>
@@ -640,7 +673,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
                   : 'bg-yellow-500 hover:bg-yellow-600 text-gray-900'
               }`}
             >
-              {!user ? '🔒 Sign in to submit' : 'Submit for Judging'}
+              {!user ? 'Sign in to submit' : 'Submit for Judging'}
             </button>
         </div>
         {isAdmin && (

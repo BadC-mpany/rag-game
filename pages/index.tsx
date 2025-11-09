@@ -32,63 +32,97 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   // `getAdminMode()` reads localStorage and is applied on the client in an effect below.
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  const [completedLevels, setCompletedLevels] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem('completedLevels');
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-  });
-
-  const [levelScores, setLevelScores] = useState<Record<string, number>>(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      const rawScores = localStorage.getItem('levelScores');
-      return rawScores ? JSON.parse(rawScores) : {};
-    } catch { return {}; }
-  });
-  const { user } = useAuth();
+  const [completedLevels, setCompletedLevels] = useState<string[]>([]);
+  const [levelScores, setLevelScores] = useState<Record<string, number>>({});
+  
+  const [currentLevel, setCurrentLevel] = useState<number>(1);
+  const [isClient, setIsClient] = useState(false);
+  const { user, session } = useAuth();
 
   // Hydration flag: avoid rendering level availability on the server to prevent
   // flicker/hydration mismatch with client-localStorage-derived state.
   const [hydrated, setHydrated] = useState<boolean>(false);
-  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => { 
+    setHydrated(true);
+    setIsClient(true);
+  }, []);
 
   // completedLevels and levelScores are initialized synchronously from localStorage to avoid UI flicker.
+
+  // Load cached values on client side
+  useEffect(() => {
+    if (isClient) {
+      try {
+        // Load completed levels
+        const raw = localStorage.getItem('completedLevels');
+        if (raw) {
+          setCompletedLevels(JSON.parse(raw));
+        }
+        
+        // Load level scores
+        const rawScores = localStorage.getItem('levelScores');
+        if (rawScores) {
+          setLevelScores(JSON.parse(rawScores));
+        }
+        
+        // Load current level
+        const cachedCurrentLevel = localStorage.getItem('cachedCurrentLevel');
+        if (cachedCurrentLevel) {
+          setCurrentLevel(parseInt(cachedCurrentLevel));
+        }
+      } catch { 
+        // Ignore localStorage errors
+      }
+    }
+  }, [isClient]);
 
   // Fetch server progress when user is signed in and merge into localStorage
   useEffect(() => {
     const fetchProgress = async () => {
-      if (!user) return;
+      if (!user || !isClient) {
+        return;
+      }
+      
       try {
-        const res = await fetch('/api/progress');
+        const res = await fetch('/api/user/progress', {
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           try {
-            const rawScores = localStorage.getItem('levelScores');
-            const scores = rawScores ? JSON.parse(rawScores) : {};
-            const mergedScores = { ...scores, ...(data.levelScores || {}) };
-            for (const k of Object.keys(mergedScores)) {
-              mergedScores[k] = Math.max(scores[k] || 0, mergedScores[k] || 0);
-            }
-            localStorage.setItem('levelScores', JSON.stringify(mergedScores));
-            setLevelScores(mergedScores);
+            // Update completed levels based on non-zero scores from leaderboard
+            const newCompletedLevels = data.completedLevels || [];
+            localStorage.setItem('completedLevels', JSON.stringify(newCompletedLevels));
+            setCompletedLevels(newCompletedLevels);
 
-            const rawCompleted = localStorage.getItem('completedLevels');
-            const comp = rawCompleted ? JSON.parse(rawCompleted) : [];
-            const mergedCompleted = Array.from(new Set([...(comp || []), ...(data.completedLevels || [])]));
-            localStorage.setItem('completedLevels', JSON.stringify(mergedCompleted));
-            setCompletedLevels(mergedCompleted);
+            // Update current level (only if different from cached)
+            const newCurrentLevel = data.currentLevel || 1;
+            setCurrentLevel(newCurrentLevel);
+            localStorage.setItem('cachedCurrentLevel', newCurrentLevel.toString());
+
+            // Update level scores from leaderboard entries
+            const scores: Record<string, number> = {};
+            if (data.leaderboardEntries) {
+              data.leaderboardEntries.forEach((entry: { level_id: string; score: number }) => {
+                if (entry.score > 0) {
+                  scores[entry.level_id] = entry.score;
+                }
+              });
+            }
+            localStorage.setItem('levelScores', JSON.stringify(scores));
+            setLevelScores(scores);
           } catch {
             // ignore local merge errors
           }
         }
       } catch {
-        // ignore network errors
+        // Silent fallback
       }
     }
     fetchProgress();
-  }, [user]);
+  }, [user, isClient, session?.access_token]);
 
   // note: level completion is handled by the judge flow in play/[level].tsx
 
@@ -154,14 +188,14 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                         // Simple sequential unlock: level N unlocks if level N-1 is completed (or it's level 1)
                         // Users can replay any unlocked level
                         return levels.map((level, idx) => {
-                          // Level is unlocked if:
-                          // 1. It's the first level (idx === 0), OR
-                          // 2. Previous level is completed, OR
-                          // 3. This level is already completed (can replay), OR
-                          // 4. Admin mode is on
-                          const prevLevelCompleted = idx === 0 || completedLevels.includes(levels[idx - 1].id);
+                          const levelNumber = idx + 1;
                           const thisLevelCompleted = completedLevels.includes(level.id);
-                          const isUnlocked = isAdmin || prevLevelCompleted || thisLevelCompleted;
+                          
+                          // Level is unlocked if:
+                          // 1. Admin mode is on, OR
+                          // 2. Level number is <= current level (sequential unlock), OR
+                          // 3. This level is already completed (can replay)
+                          const isUnlocked = isAdmin || levelNumber <= currentLevel || thisLevelCompleted;
                           
                           return (
                             <div key={level.id} className={`flex items-center gap-4 ${!isUnlocked ? 'opacity-60' : ''} bg-gray-900 p-3 rounded border border-gray-800`}>
@@ -180,11 +214,21 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                               </div>
                               <div>
                                 {isUnlocked ? (
-                                  <Link href={`/play/${level.id}`} onClick={() => playClick()} className="inline-block bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-bold py-2 px-4 rounded hover:brightness-110 transition-all btn-press">
+                                  <Link 
+                                    href={`/play/${level.id}`} 
+                                    onClick={() => playClick()} 
+                                    className={`inline-block font-bold py-2 px-4 rounded transition-all btn-press ${
+                                      thisLevelCompleted 
+                                        ? 'bg-transparent border-2 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white' 
+                                        : 'bg-gradient-to-r from-green-500 to-green-400 text-gray-900 hover:brightness-110'
+                                    }`}
+                                  >
                                     {thisLevelCompleted ? 'Replay' : 'Play Now'}
                                   </Link>
                                 ) : (
-                                  <button className="inline-block bg-gray-700 text-gray-300 font-semibold py-2 px-3 rounded cursor-not-allowed">Locked</button>
+                                  <button className="inline-block bg-gray-700 text-gray-300 font-semibold py-2 px-3 rounded cursor-not-allowed">
+                                    {levelNumber > currentLevel ? 'Locked' : 'Locked'}
+                                  </button>
                                 )}
                               </div>
                             </div>

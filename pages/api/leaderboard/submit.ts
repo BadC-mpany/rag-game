@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSupabaseServiceClient } from '../../../lib/supabase';
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -12,13 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing required fields: levelId, score' });
   }
 
-  // Get user from authorization header
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid authorization header' });
-  }
-
-  const token = authHeader.substring(7);
+  // Use cookie-based session (no Authorization header needed)
   const supabase = getSupabaseServiceClient();
   
   if (!supabase) {
@@ -26,55 +21,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Verify the JWT token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Try cookie-based session first
+    const supabaseServer = createPagesServerClient({ req, res });
+    const { data: sessionData, error: sessErr } = await supabaseServer.auth.getSession();
+    let user = sessionData.session?.user;
     
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Invalid token' });
+    if (sessErr || !user) {
+      // Fallback: accept Authorization: Bearer <access_token>
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7);
+        try {
+          const { data: tokenUser, error } = await supabase.auth.getUser(token);
+          if (!error && tokenUser?.user) {
+            user = tokenUser.user;
+          }
+        } catch {
+          // Silent fallback
+        }
+      }
+    }
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Check if user already has a score for this level
+    // Ensure a row exists, then update with max(score) and refreshed timestamp
+    const { error: insertError } = await supabase
+      .from('leaderboard')
+      .insert({ user_id: user.id, level_id: levelId, score: 0, timestamp: new Date().toISOString() });
+    
+    // Ignore insert conflicts (row already exists)
+    if (insertError && !insertError.message.includes('duplicate key')) {
+      console.error('Error inserting leaderboard row:', insertError);
+    }
+
     const { data: existingEntry, error: fetchError } = await supabase
       .from('leaderboard')
       .select('score')
       .eq('user_id', user.id)
       .eq('level_id', levelId)
       .single();
-
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+    if (fetchError) {
       console.error('Error fetching existing score:', fetchError);
       return res.status(500).json({ error: 'Database error' });
     }
 
-    // Only update if the new score is higher
-    if (existingEntry && existingEntry.score >= score) {
-      return res.status(200).json({ 
-        message: 'Score not updated - existing score is higher or equal',
-        currentScore: existingEntry.score 
-      });
-    }
-
-    // Insert or update the score (the trigger will automatically set the name and email)
-    const { error: upsertError } = await supabase
+    const newScore = Math.max(Number(existingEntry?.score) || 0, Number(score) || 0);
+    
+    const { error: updateError } = await supabase
       .from('leaderboard')
-      .upsert({
-        user_id: user.id,
-        level_id: levelId,
-        score: score,
-        timestamp: new Date().toISOString()
-      }, {
-        onConflict: 'user_id,level_id'
-      });
-
-    if (upsertError) {
-      console.error('Error upserting score:', upsertError);
+      .update({ 
+        score: newScore, 
+        timestamp: new Date().toISOString() 
+      })
+      .eq('user_id', user.id)
+      .eq('level_id', levelId);
+    if (updateError) {
+      console.error('Error updating score:', updateError);
       return res.status(500).json({ error: 'Failed to save score' });
     }
 
-    res.status(200).json({ 
-      message: 'Score submitted successfully',
-      score: score 
-    });
+    res.status(200).json({ message: 'Score submitted successfully', score: newScore });
 
   } catch (error) {
     console.error('Error in leaderboard submit:', error);

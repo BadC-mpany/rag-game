@@ -12,6 +12,9 @@ ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.us
 -- Add email column to store user email
 ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS email TEXT;
 
+-- Add current_level column to track max level completed
+ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS current_level INTEGER DEFAULT 1;
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_leaderboard_user_level ON leaderboard(user_id, level_id);
 CREATE INDEX IF NOT EXISTS idx_leaderboard_score ON leaderboard(level_id, score DESC);
@@ -24,7 +27,6 @@ BEGIN
     SELECT 
         COALESCE(
             (auth.users.raw_user_meta_data->>'display_name'),
-            (auth.users.user_metadata->>'display_name'),
             split_part(auth.users.email, '@', 1),
             'Anonymous'
         ),
@@ -50,7 +52,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     -- Insert into leaderboard, let the name trigger handle the name/email population
     INSERT INTO public.leaderboard (user_id, level_id, score, timestamp)
-    VALUES (NEW.id, 'level-1', 0, NOW());
+           VALUES (NEW.id, '1', 0, NOW());
     
     RETURN NEW;
 EXCEPTION

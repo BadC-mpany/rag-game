@@ -40,7 +40,7 @@
     "allowsFiles": false,
     "upload_files": false,
     "make_new_file": false,
-    "unlockedBy": "level-001",
+    "unlockedBy": "level-002",
     "gameId": "game-llm-company",
     "allowed_files": "NONE"
   },
@@ -55,7 +55,7 @@
     "allowsFiles": true,
     "upload_files": true,
     "make_new_file": true,
-    "unlockedBy": "level-002",
+    "unlockedBy": "level-003",
     "gameId": "game-llm-company",
     "allowed_files": "ANY"
   },
@@ -70,7 +70,7 @@
     "allowsFiles": true,
     "upload_files": false,
     "make_new_file": false,
-    "unlockedBy": "level-002",
+    "unlockedBy": "level-004",
     "gameId": "game-llm-company",
     "allowed_files": ["intern_work_log.txt"]
   },
@@ -85,7 +85,7 @@
     "allowsFiles": true,
     "upload_files": false,
     "make_new_file": false,
-    "unlockedBy": "level-002",
+    "unlockedBy": "level-005",
     "gameId": "game-llm-company",
     "allowed_files": ["self_report.md"]
   },
@@ -100,7 +100,7 @@
     "allowsFiles": true,
     "upload_files": true,
     "make_new_file": true,
-    "unlockedBy": "level-002",
+    "unlockedBy": "level-006",
     "gameId": "game-llm-company",
     "allowed_files": "ANY"
   },
@@ -115,7 +115,7 @@
     "allowsFiles": true,
     "upload_files": false,
     "make_new_file": false,
-    "unlockedBy": "level-002",
+    "unlockedBy": "level-007",
     "gameId": "game-llm-company",
     "allowed_files": ["new_hire_orientation_plan.txt"]
   },
@@ -130,7 +130,7 @@
     "allowsFiles": false,
     "upload_files": false,
     "make_new_file": false,
-    "unlockedBy": "level-001",
+    "unlockedBy": "level-008",
     "gameId": "game-llm-company",
     "allowed_files": "NONE"
   },
@@ -145,7 +145,7 @@
     "allowsFiles": false,
     "upload_files": false,
     "make_new_file": false,
-    "unlockedBy": "level-001",
+    "unlockedBy": "level-009",
     "gameId": "game-llm-company",
     "allowed_files": "NONE"
   }

@@ -1,3 +1,6 @@
 {
-  "enableDebugLogging": false
+  "enabled": false,
+  "provider": "openai",
+  "model": "whisper-1",
+  "language": "en"
 }
