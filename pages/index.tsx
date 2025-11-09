@@ -5,7 +5,6 @@ import fs from 'fs';
 import path from 'path';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-// RetroLogo is provided in the shared Sidebar; remove local import
 import Sidebar from '../components/Sidebar';
 import Auth from '../components/Auth';
 import { playClick } from '../lib/sound';
@@ -147,7 +146,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
           <main className="flex-1 animate-fade-in">
             <header className="flex justify-between items-center mb-8">
               <div>
-                <h2 className="text-4xl font-bold text-green-400">Retro hacking playground</h2>
+                <h2 className="text-4xl font-bold text-green-400">The hacking playground</h2>
                 <p className="text-sm text-gray-400 mt-1">A game to hack LLM agents and improve AI security.</p>
               </div>
               <Auth />
@@ -172,9 +171,8 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-2xl font-bold">LLM Agent in a company</h3>
-                      <p className="text-gray-400 mt-2">Simulate a company&apos;s assistant agent and try to find prompt-injection and social engineering vulnerabilities.</p>
+                      <p className="text-gray-400 mt-2">We simulate a company&apos;s assistant agent and try to find prompt-injection and social engineering vulnerabilities.</p>
                     </div>
-                    <div className="text-sm text-gray-400">Game • Cybersecurity</div>
                   </div>
 
                   <div className="mt-6">

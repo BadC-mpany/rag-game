@@ -11,7 +11,7 @@ const About: NextPage = () => {
           <main className="flex-1 max-w-4xl bg-gray-800 p-8 rounded-lg border border-gray-700 animate-fade-in">
             <div>
               <h1 className="text-3xl font-bold text-green-400 mb-4">About Badcompany</h1>
-              <p className="text-gray-400 mb-6">A retro-themed red-team game to help researchers and enthusiasts find prompt-injection and social engineering flaws in LLM-based agents.</p>
+              <p className="text-gray-400 mb-6">A realistic red-team game to help researchers and enthusiasts find prompt-injection and social engineering flaws in LLM-based agents.</p>
             </div>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
