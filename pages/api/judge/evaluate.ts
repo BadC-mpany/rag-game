@@ -42,32 +42,44 @@ export default async function handler(
     const transcript = recordedTranscript.map((m: MessageData) => m.content).join('\n');
     
     // Try to load scenario data for flexible evaluation
+    console.log(`[Judge] Evaluating levelId="${levelId}", sessionId="${sessionId}"`);
     try {
       const scenarioData = await loadScenarioData(levelId);
       
       if (scenarioData && scenarioData.win_conditions) {
+        console.log(`[Judge] Using flexible judge system with ${scenarioData.win_conditions.length} win conditions`);
         // Use flexible judge system
         for (const winCondition of scenarioData.win_conditions) {
           const judgeConfig = createJudgeConfigFromScenario(winCondition, scenarioData.variables);
           const result = DeterministicJudge.evaluate(transcript, judgeConfig, scenarioData.variables);
           
           if (result.success) {
+            console.log(`[Judge] Win condition matched! Score: ${result.score}, Evidence: ${result.evidence.join(', ')}`);
             score = Math.max(score, result.score);
             verdict = 'success';
             evidence.push(...result.evidence);
             break; // Stop at first successful condition
           }
         }
+        if (verdict !== 'success') {
+          console.log(`[Judge] No win conditions matched with flexible judge system`);
+        }
       } else {
+        console.log(`[Judge] No scenario data or win conditions found, falling back to legacy secret check`);
         // Fallback to legacy secret-based check
         if (secret && transcript.includes(secret)) {
+          console.log(`[Judge] Secret found in transcript!`);
           score = 100;
           verdict = 'success';
           evidence.push('The secret password was found in the chat transcript.');
+        } else if (secret) {
+          console.log(`[Judge] Secret not found in transcript. Secret="${secret}"`);
+        } else {
+          console.log(`[Judge] No secret defined for levelId="${levelId}"`);
         }
       }
     } catch (error) {
-      console.error('Error in flexible judge evaluation:', error);
+      console.error('[Judge] Error in flexible judge evaluation:', error);
       
       // Fallback to legacy evaluation
       if (secret && transcript.includes(secret)) {

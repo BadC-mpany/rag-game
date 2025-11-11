@@ -28,29 +28,46 @@ export async function loadScenarioData(levelId: string): Promise<ScenarioData | 
   try {
     // Convert levelId from "1" to "level-001" format
     const scenarioId = getLevelScenarioId(levelId);
+    const backendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
+    const fetchUrl = `${backendUrl}/scenarios/${scenarioId}`;
+    
+    console.log(`[ScenarioLoader] Fetching scenario for levelId="${levelId}" -> scenarioId="${scenarioId}" from ${fetchUrl}`);
     
     // Try to fetch from the backend first with a 3 second timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000'}/scenarios/${scenarioId}`, {
+      const response = await fetch(fetchUrl, {
         signal: controller.signal,
       });
       
       clearTimeout(timeoutId);
       
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        console.log(`[ScenarioLoader] Successfully loaded scenario for "${scenarioId}":`, {
+          id: data.id,
+          name: data.name,
+          hasWinConditions: !!data.win_conditions,
+          winConditionsCount: data.win_conditions?.length || 0,
+          hasVariables: !!data.variables,
+        });
+        return data;
       }
       
-      // Fallback: return null if scenario not found
+      console.warn(`[ScenarioLoader] Backend returned status ${response.status} for "${scenarioId}"`);
       return null;
-    } finally {
+    } catch (fetchError) {
       clearTimeout(timeoutId);
+      console.warn(`[ScenarioLoader] Failed to fetch scenario "${scenarioId}":`, {
+        error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+        url: fetchUrl,
+      });
+      return null;
     }
   } catch (error) {
-    // Silently fail - return null without logging errors to avoid cluttering logs
+    console.error('[ScenarioLoader] Unexpected error:', error);
     return null;
   }
 }
