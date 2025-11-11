@@ -27,12 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Try to fetch user data from Clerk to get display name
+    // Fetch user data from Clerk to get display name
     let userName = 'Player';
     let userEmail = '';
-    
-    console.log(`[Leaderboard] Auth object keys:`, Object.keys(auth));
-    console.log(`[Leaderboard] Fetching Clerk user data for userId="${userId}"`);
     
     try {
       const response = await fetch('https://api.clerk.com/v1/users/' + userId, {
@@ -43,11 +40,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       if (response.ok) {
         const clerkUser = await response.json();
-        console.log(`[Leaderboard] Clerk API response:`, {
-          username: clerkUser.username,
-          firstName: clerkUser.first_name,
-          emailAddresses: clerkUser.email_addresses,
-        });
         
         // Prefer username, then firstName, then email prefix
         if (clerkUser.username) {
@@ -63,12 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (clerkUser.email_addresses && clerkUser.email_addresses.length > 0) {
           userEmail = clerkUser.email_addresses[0].email_address;
         }
-        console.log(`[Leaderboard] Successfully fetched Clerk user: username="${userName}", email="${userEmail}"`);
-      } else {
-        console.warn(`[Leaderboard] Clerk API returned status ${response.status}`);
       }
     } catch (clerkError) {
-      console.error('[Leaderboard] Error fetching Clerk user data:', clerkError);
       // Continue with default userName if Clerk fetch fails
     }
 
@@ -85,7 +73,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const newScore = Math.max(Number(existingScore) || 0, Number(score) || 0);
 
     // Upsert: insert if not exists, update if exists
-    console.log(`[Leaderboard] Upserting to leaderboard: userId="${userId}", levelId="${levelId}", score=${newScore}, name="${userName}"`);
     const { error: upsertError } = await supabase
       .from('leaderboard')
       .upsert(
@@ -100,16 +87,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
 
     if (upsertError) {
-      console.error('[Leaderboard] Error upserting leaderboard entry:', {
-        error: upsertError,
-        code: upsertError.code,
-        message: upsertError.message,
-        details: upsertError.details,
-      });
-      return res.status(500).json({ error: 'Failed to save score', details: upsertError.message });
+      return res.status(500).json({ error: 'Failed to save score' });
     }
 
-    console.log(`[Leaderboard] Successfully saved score for userId="${userId}" on levelId="${levelId}"`);
     res.status(200).json({ message: 'Score submitted successfully', score: newScore });
 
   } catch (error) {

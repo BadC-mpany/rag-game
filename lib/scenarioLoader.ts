@@ -31,8 +31,6 @@ export async function loadScenarioData(levelId: string): Promise<ScenarioData | 
     const backendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
     const fetchUrl = `${backendUrl}/scenarios/${scenarioId}`;
     
-    console.log(`[ScenarioLoader] Fetching scenario for levelId="${levelId}" -> scenarioId="${scenarioId}" from ${fetchUrl}`);
-    
     // Try to fetch from the backend first with a 3 second timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -46,28 +44,15 @@ export async function loadScenarioData(levelId: string): Promise<ScenarioData | 
       
       if (response.ok) {
         const data = await response.json();
-        console.log(`[ScenarioLoader] Successfully loaded scenario for "${scenarioId}":`, {
-          id: data.id,
-          name: data.name,
-          hasWinConditions: !!data.win_conditions,
-          winConditionsCount: data.win_conditions?.length || 0,
-          hasVariables: !!data.variables,
-        });
         return data;
       }
       
-      console.warn(`[ScenarioLoader] Backend returned status ${response.status} for "${scenarioId}"`);
       return null;
     } catch (fetchError) {
       clearTimeout(timeoutId);
-      console.warn(`[ScenarioLoader] Failed to fetch scenario "${scenarioId}":`, {
-        error: fetchError instanceof Error ? fetchError.message : String(fetchError),
-        url: fetchUrl,
-      });
       return null;
     }
   } catch (error) {
-    console.error('[ScenarioLoader] Unexpected error:', error);
     return null;
   }
 }
