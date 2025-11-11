@@ -4,7 +4,7 @@ import Link from 'next/link';
 import fs from 'fs';
 import path from 'path';
 import { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@clerk/nextjs';
 import Sidebar from '../components/Sidebar';
 import Auth from '../components/Auth';
 import { playClick } from '../lib/sound';
@@ -49,7 +49,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [isClient, setIsClient] = useState(false);
-  const { user, session } = useAuth();
+  const { userId, isSignedIn } = useAuth();
 
   // Hydration flag: avoid rendering level availability on the server to prevent
   // flicker/hydration mismatch with client-localStorage-derived state.
@@ -76,14 +76,14 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   // Fetch server progress when user is signed in and merge into localStorage
   useEffect(() => {
     const fetchProgress = async () => {
-      if (!user || !isClient) {
+      if (!userId || !isSignedIn || !isClient) {
         return;
       }
       
       try {
-        const res = await fetch('/api/user/progress', {
+        const res = await fetch('/api/user/progress-clerk', {
           headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
           }
         });
         if (res.ok) {
@@ -119,7 +119,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
       }
     }
     fetchProgress();
-  }, [user, isClient]);
+  }, [userId, isSignedIn, isClient]);
 
   // note: level completion is handled by the judge flow in play/[level].tsx
 

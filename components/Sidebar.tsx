@@ -3,12 +3,13 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { FaShareAlt } from 'react-icons/fa';
-import { useAuth, useClerk } from '@clerk/nextjs';
+import { useAuth, useClerk, useUser } from '@clerk/nextjs';
 import ShareModal from './ShareModal';
 import { playClick } from '../lib/sound';
 
 export default function Sidebar() {
-  const { user, isSignedIn } = useAuth();
+  const { userId, isSignedIn } = useAuth();
+  const { user } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
@@ -42,7 +43,7 @@ export default function Sidebar() {
   };
 
   const fetchUserStats = async (forceRefresh = false) => {
-    if (!user) return;
+    if (!userId || !isSignedIn) return;
     
     // Check if we have cached data and don't need to refresh
     if (!forceRefresh) {
@@ -115,7 +116,7 @@ export default function Sidebar() {
     if (isClient && isSignedIn) {
       fetchUserStats();
     }
-  }, [user, isClient, isSignedIn]);
+  }, [userId, isClient, isSignedIn]);
 
   // Expose refresh function globally so other components can call it
   useEffect(() => {
@@ -123,7 +124,7 @@ export default function Sidebar() {
     return () => {
       delete (window as any).refreshUserStats;
     };
-  }, [user, session]);
+  }, [userId, isSignedIn]);
 
   return (
     <aside className={`w-64 bg-gray-800 bg-opacity-40 backdrop-blur-md p-4 rounded-lg border border-gray-700 flex-col hidden md:flex ${sidebarOpen ? '' : 'hidden'}`}>
@@ -151,7 +152,7 @@ export default function Sidebar() {
 
       <div className="mt-auto pt-4">
         <div className="flex flex-col gap-2">
-          {user ? (
+          {user && isSignedIn ? (
             <div className="px-3 py-2 bg-gray-900 border border-gray-700 rounded text-center">
               <div className="text-sm font-semibold text-green-400">
                 {user.username || user.firstName || user.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 'Player'}
@@ -167,7 +168,7 @@ export default function Sidebar() {
             </button>
           </div>
           <ShareModal open={shareOpen} onClose={() => { playClick(); setShareOpen(false); }} />
-          {user && shouldShowSignOut() && (
+          {isSignedIn && shouldShowSignOut() && (
             <div className="mt-3">
               <button onClick={() => signOut()} className="w-full text-sm bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded btn-press">Sign out</button>
             </div>

@@ -1,37 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { auth } from '@clerk/nextjs/server';
+import { getAuth } from '@clerk/nextjs/server';
 import { getSupabaseServiceClient } from '../../../lib/supabase';
 
-interface StatsResponse {
-  totalScore?: number;
-  currentLevel?: number;
-  leaderboardEntries?: any[];
-  error?: string;
-}
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse<StatsResponse>) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Get the Clerk user from the request
-    const { userId } = auth();
-
+    const { userId } = getAuth(req);
+    
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const supabase = getSupabaseServiceClient();
     if (!supabase) {
-      return res.status(500).json({ error: 'Database not configured' });
+      return res.status(500).json({ error: 'Supabase not configured' });
     }
 
-    // Get leaderboard entries for this Clerk user
+    // Get user's total score and current level from leaderboard
     const { data: leaderboardEntries, error } = await supabase
       .from('leaderboard')
       .select('level_id, score')
-      .eq('clerk_id', userId);
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Error fetching leaderboard entries:', error);
@@ -41,25 +33,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Calculate total score and current level
     let totalScore = 0;
     let currentLevel = 1;
-
+    
     if (leaderboardEntries && leaderboardEntries.length > 0) {
       // Sum all scores
       totalScore = leaderboardEntries.reduce((sum, entry) => sum + (entry.score || 0), 0);
-
+      
       // Calculate current level based on completed levels
       const completedLevels = leaderboardEntries
-        .filter((entry) => entry.score > 0)
-        .map((entry) => entry.level_id);
-
+        .filter(entry => entry.score > 0)
+        .map(entry => entry.level_id);
+      
       if (completedLevels.length > 0) {
         // Convert level IDs to numbers and find the highest completed level
         const completedLevelNumbers = completedLevels
-          .map((id) => {
-            const match = id.match(/\d+/);
-            return match ? parseInt(match[0]) : 0;
-          })
-          .filter((num) => !isNaN(num) && num > 0);
-
+          .map(id => parseInt(id))
+          .filter(num => !isNaN(num));
+        
         if (completedLevelNumbers.length > 0) {
           const maxCompletedLevel = Math.max(...completedLevelNumbers);
           // Unlock the next level after the highest completed one
@@ -68,14 +57,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }
     }
 
-    return res.status(200).json({
+    res.status(200).json({
       totalScore,
       currentLevel,
-      leaderboardEntries: leaderboardEntries || [],
+      leaderboardEntries: leaderboardEntries || []
     });
+
   } catch (error) {
     console.error('Error in user stats API:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
 

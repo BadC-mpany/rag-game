@@ -8,7 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import FileSystemExplorer from '../../components/FileSystemExplorer';
 import { lineDiff, formatUnifiedDiff } from '../../lib/diff';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@clerk/nextjs';
 import { updateUserProgress } from '../../lib/userProgress';
 import { getAdminMode } from '../../lib/admin';
 
@@ -53,7 +53,7 @@ interface LevelPageProps {
 
 const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', title: '', description: '', goal: '', files: [] }, gameConfig: initialGameConfig }) => {
   const router = useRouter();
-  const { user, session } = useAuth();
+  const { userId, isSignedIn } = useAuth();
   const [level, setLevel] = useState(initialLevel);
   const [gameCfg] = useState<GameConfig>(initialGameConfig || { agent_system_description: 'The agent is a sandboxed assistant that can read provided files, summarize content, and call a small set of simulated tools when enabled by the level.', tools: [] });
   // Initialize admin mode synchronously from localStorage to avoid render-time
@@ -109,9 +109,9 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   // Sync server-side progress for authenticated users
   useEffect(() => {
     const fetchProgress = async () => {
-      if (!session) return;
+      if (!userId || !isSignedIn) return;
       try {
-        const res = await fetch('/api/progress');
+        const res = await fetch('/api/progress-clerk');
         if (res.ok) {
           const data = await res.json();
           // merge completed levels and scores locally
@@ -134,7 +134,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
       } catch { }
     }
     fetchProgress();
-  }, [session]);
+  }, [userId, isSignedIn]);
 
   // Keep isAdmin in sync across tabs
   useEffect(() => {
@@ -254,7 +254,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
     if (!input.trim() || isLoading) return;
 
     // Check if user is authenticated
-    if (!user) {
+    if (!userId || !isSignedIn) {
       alert('You must sign in to send messages to the agent. Please sign in to continue.');
       return;
     }
@@ -343,17 +343,16 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
   };
 
   const handleSubmitToLeaderboard = async (score: number) => {
-    if (!session) {
+    if (!userId || !isSignedIn) {
       return;
     }
 
     try {
       const headers = {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
       };
       
-      const res = await fetch('/api/leaderboard/submit', {
+      const res = await fetch('/api/leaderboard/submit-clerk', {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -377,7 +376,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
 
   const handleJudge = async () => {
     // Check if user is authenticated
-    if (!user) {
+    if (!userId || !isSignedIn) {
       alert('You must sign in to submit your solution for judging. Please sign in to continue.');
       return;
     }
@@ -437,7 +436,7 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
           }
 
           // Submit to leaderboard if authenticated
-          if (user) {
+          if (userId && isSignedIn) {
             await handleSubmitToLeaderboard(result.score);
             
             // Update user progress in Supabase
@@ -449,9 +448,9 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
             
             // Refresh user progress to update current level and completed levels
             try {
-              const progressRes = await fetch('/api/user/progress', {
+              const progressRes = await fetch('/api/user/progress-clerk', {
                 headers: {
-                  'Authorization': `Bearer ${session?.access_token}`,
+                  'Content-Type': 'application/json',
                 }
               });
               if (progressRes.ok) {
@@ -574,28 +573,28 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
         <textarea
           rows={1}
           className="flex-1 bg-gray-800 rounded-l-md p-2 focus:outline-none text-white focus:ring-2 focus:ring-green-400 border border-gray-700 resize-none"
-          placeholder={!user ? "Sign in to send messages..." : "Type your message..."}
+          placeholder={!isSignedIn ? "Sign in to send messages..." : "Type your message..."}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !isLoading && user) {
+            if (e.key === 'Enter' && !e.shiftKey && !isLoading && isSignedIn) {
               e.preventDefault();
               handleSendMessage();
             }
           }}
-          disabled={isLoading || !user}
+          disabled={isLoading || !isSignedIn}
           style={{ minHeight: '2.5rem', maxHeight: '10rem', overflow: 'auto' }}
         />
                 <button
           className={`font-bold py-2 px-4 rounded-r-md shadow-sm transition-all ${
-            isLoading || !user
+            isLoading || !isSignedIn
               ? 'bg-gradient-to-r from-gray-600 to-gray-500 text-gray-400 cursor-not-allowed opacity-60' 
               : 'bg-gradient-to-r from-green-500 to-green-400 hover:brightness-110 text-gray-900'
           }`}
                   onClick={() => { playClick(); handleSendMessage(); }}
-          disabled={isLoading || !user}
+          disabled={isLoading || !isSignedIn}
         >
-          {isLoading ? 'Thinking...' : !user ? 'Sign in to chat' : 'Send'}
+          {isLoading ? 'Thinking...' : !isSignedIn ? 'Sign in to chat' : 'Send'}
         </button>
                 </div>
             </>
@@ -665,14 +664,14 @@ const LevelPage: NextPage<LevelPageProps> = ({ level: initialLevel = { id: '', t
         <div className="mt-8">
             <button 
               onClick={handleJudge} 
-              disabled={!user}
+              disabled={!isSignedIn}
               className={`w-full font-bold py-2 px-4 rounded transition-all ${
-                !user 
+                !isSignedIn 
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-60' 
                   : 'bg-yellow-500 hover:bg-yellow-600 text-gray-900'
               }`}
             >
-              {!user ? 'Sign in to submit' : 'Submit for Judging'}
+              {!isSignedIn ? 'Sign in to submit' : 'Submit for Judging'}
             </button>
         </div>
         {isAdmin && (
