@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from '@clerk/nextjs/server';
+import { clerkClient } from '@clerk/nextjs/server';
 import { getSupabaseServiceClient } from '../../../lib/supabase';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -26,6 +27,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Fetch user data from Clerk to get display name and email
+    let userName = 'Player';
+    let userEmail = '';
+    
+    try {
+      const clerkUser = await clerkClient.users.getUser(userId);
+      
+      // Prefer username, then firstName, then email prefix
+      if (clerkUser.username) {
+        userName = clerkUser.username;
+      } else if (clerkUser.firstName) {
+        userName = clerkUser.firstName;
+      } else if (clerkUser.emailAddresses && clerkUser.emailAddresses.length > 0) {
+        userEmail = clerkUser.emailAddresses[0].emailAddress;
+        userName = userEmail.split('@')[0];
+      }
+      
+      // Get primary email
+      if (clerkUser.emailAddresses && clerkUser.emailAddresses.length > 0) {
+        userEmail = clerkUser.emailAddresses[0].emailAddress;
+      }
+    } catch (clerkError) {
+      console.error('Error fetching Clerk user data:', clerkError);
+      // Continue with default userName if Clerk fetch fails
+    }
+
     // First, fetch existing score if any
     const { data: existingEntry, error: fetchError } = await supabase
       .from('leaderboard')
@@ -47,6 +74,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           level_id: levelId,
           score: newScore,
           timestamp: new Date().toISOString(),
+          name: userName,
+          email: userEmail,
         },
         {
           onConflict: 'user_id,level_id',
