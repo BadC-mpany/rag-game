@@ -3,12 +3,13 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { FaShareAlt } from 'react-icons/fa';
+import { useAuth, useClerk } from '@clerk/nextjs';
 import ShareModal from './ShareModal';
 import { playClick } from '../lib/sound';
-import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar() {
-  const { user, session, signOut } = useAuth();
+  const { user, isSignedIn } = useAuth();
+  const { signOut } = useClerk();
   const router = useRouter();
   const [shareOpen, setShareOpen] = useState(false);
   const [sidebarOpen] = useState(true);
@@ -55,9 +56,9 @@ export default function Sidebar() {
     }
     
     try {
-      const res = await fetch('/api/user/stats', {
+      const res = await fetch('/api/user/stats-clerk', {
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
         }
       });
       
@@ -111,10 +112,10 @@ export default function Sidebar() {
   }, [isClient]);
 
   useEffect(() => {
-    if (isClient) {
+    if (isClient && isSignedIn) {
       fetchUserStats();
     }
-  }, [user, isClient]);
+  }, [user, isClient, isSignedIn]);
 
   // Expose refresh function globally so other components can call it
   useEffect(() => {
@@ -153,7 +154,7 @@ export default function Sidebar() {
           {user ? (
             <div className="px-3 py-2 bg-gray-900 border border-gray-700 rounded text-center">
               <div className="text-sm font-semibold text-green-400">
-                {user.user_metadata?.display_name || user.email?.split('@')[0] || 'Player'}
+                {user.username || user.firstName || user.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 'Player'}
               </div>
               <div className="text-xs text-gray-400">Level {currentLevel}</div>
             </div>
