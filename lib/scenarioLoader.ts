@@ -29,17 +29,28 @@ export async function loadScenarioData(levelId: string): Promise<ScenarioData | 
     // Convert levelId from "1" to "level-001" format
     const scenarioId = getLevelScenarioId(levelId);
     
-    // Try to fetch from the backend first
-    const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000'}/scenarios/${scenarioId}`);
+    // Try to fetch from the backend first with a 3 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     
-    if (response.ok) {
-      return await response.json();
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000'}/scenarios/${scenarioId}`, {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        return await response.json();
+      }
+      
+      // Fallback: return null if scenario not found
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    
-    // Fallback: return null if scenario not found
-    return null;
   } catch (error) {
-    console.error('Error loading scenario data:', error);
+    // Silently fail - return null without logging errors to avoid cluttering logs
     return null;
   }
 }
