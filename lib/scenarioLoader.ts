@@ -17,19 +17,42 @@ export interface ScenarioData {
   }>;
 }
 
+// Convert level ID (e.g., "1") to scenario filename (e.g., "level-001")
+function getLevelScenarioId(levelId: string): string {
+  const levelNum = parseInt(levelId, 10);
+  if (isNaN(levelNum)) return levelId; // fallback if not a number
+  return `level-${String(levelNum).padStart(3, '0')}`;
+}
+
 export async function loadScenarioData(levelId: string): Promise<ScenarioData | null> {
   try {
-    // Try to fetch from the backend first
-    const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000'}/scenarios/${levelId}`);
+    // Convert levelId from "1" to "level-001" format
+    const scenarioId = getLevelScenarioId(levelId);
+    const backendUrl = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
+    const fetchUrl = `${backendUrl}/scenarios/${scenarioId}`;
     
-    if (response.ok) {
-      return await response.json();
+    // Try to fetch from the backend first with a 3 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    try {
+      const response = await fetch(fetchUrl, {
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      
+      return null;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      return null;
     }
-    
-    // Fallback: return null if scenario not found
-    return null;
   } catch (error) {
-    console.error('Error loading scenario data:', error);
     return null;
   }
 }

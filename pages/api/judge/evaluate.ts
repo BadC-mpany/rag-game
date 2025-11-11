@@ -2,6 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:8001';
 
+// Convert level ID (e.g., "1") to scenario filename (e.g., "level-001")
+function getLevelScenarioId(levelId: string): string {
+  const levelNum = parseInt(levelId, 10);
+  if (isNaN(levelNum)) return levelId; // fallback if not a number
+  return `level-${String(levelNum).padStart(3, '0')}`;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
