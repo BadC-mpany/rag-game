@@ -6,6 +6,13 @@ import { loadScenarioData } from '../../../lib/scenarioLoader';
 
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
 
+// Convert level ID (e.g., "1") to scenario filename (e.g., "level-001")
+function getLevelScenarioId(levelId: string): string {
+  const levelNum = parseInt(levelId, 10);
+  if (isNaN(levelNum)) return levelId; // fallback if not a number
+  return `level-${String(levelNum).padStart(3, '0')}`;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -72,6 +79,9 @@ export default async function handler(
     // If deterministic check didn't find success, try LLM judge via Python backend
     if (verdict !== 'success') {
       try {
+        // Convert levelId from "1" to "level-001" format
+        const scenarioId = getLevelScenarioId(levelId);
+
         const response = await fetch(`${PYTHON_BACKEND_URL}/judge/evaluate`, {
           method: 'POST',
           headers: {
@@ -79,7 +89,7 @@ export default async function handler(
           },
           body: JSON.stringify({
             sessionId,
-            levelId,
+            levelId: scenarioId,
             recordedTranscript,
             artifacts: artifacts || { files: [] },
           }),

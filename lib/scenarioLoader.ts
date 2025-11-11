@@ -17,10 +17,20 @@ export interface ScenarioData {
   }>;
 }
 
+// Convert level ID (e.g., "1") to scenario filename (e.g., "level-001")
+function getLevelScenarioId(levelId: string): string {
+  const levelNum = parseInt(levelId, 10);
+  if (isNaN(levelNum)) return levelId; // fallback if not a number
+  return `level-${String(levelNum).padStart(3, '0')}`;
+}
+
 export async function loadScenarioData(levelId: string): Promise<ScenarioData | null> {
   try {
+    // Convert levelId from "1" to "level-001" format
+    const scenarioId = getLevelScenarioId(levelId);
+    
     // Try to fetch from the backend first
-    const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000'}/scenarios/${levelId}`);
+    const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL || 'http://localhost:8000'}/scenarios/${scenarioId}`);
     
     if (response.ok) {
       return await response.json();
