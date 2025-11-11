@@ -57,12 +57,6 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
           setCompletedLevels(JSON.parse(raw));
         }
         
-        // Load level scores
-        const rawScores = localStorage.getItem('levelScores');
-        if (rawScores) {
-          setLevelScores(JSON.parse(rawScores));
-        }
-        
         // Load current level
         const cachedCurrentLevel = localStorage.getItem('cachedCurrentLevel');
         if (cachedCurrentLevel) {

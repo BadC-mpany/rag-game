@@ -94,7 +94,7 @@ export default function Sidebar() {
         setTotalScore(total);
       } catch { }
     }
-  }, [user, isSignedIn]);
+  }, [user]);
 
   useEffect(() => {
     setIsClient(true);
