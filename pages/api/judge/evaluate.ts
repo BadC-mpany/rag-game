@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import { getAuth } from '@clerk/nextjs/server';
 import { DeterministicJudge, createJudgeConfigFromScenario } from '../../../lib/judges';
 import { loadScenarioData } from '../../../lib/scenarioLoader';
 
@@ -116,6 +117,22 @@ export default async function handler(
       }
     }
 
+    // If successful, save the jailbreak attempt asynchronously
+    if (verdict === 'success') {
+      const { userId, getToken } = getAuth(req);
+      if (userId) {
+        // Don't wait for this to complete; save asynchronously
+        try {
+          const token = await getToken();
+          saveJailbreak(token, levelId, recordedTranscript).catch((error) => {
+            console.error('Failed to save jailbreak:', error);
+          });
+        } catch (error) {
+          console.error('Error getting auth token for jailbreak save:', error);
+        }
+      }
+    }
+
     res.status(200).json({
       score,
       verdict,
@@ -125,6 +142,30 @@ export default async function handler(
   } else {
     res.setHeader('Allow', ['POST']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+}
+
+// Helper function to save jailbreak to Supabase
+async function saveJailbreak(token: string | null, levelId: string, transcript: any[]) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/jailbreaks/save`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+      body: JSON.stringify({
+        levelId,
+        conversation: transcript,
+      }),
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+
+    if (!response.ok) {
+      console.error('Failed to save jailbreak:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error saving jailbreak:', error);
   }
 }
 
