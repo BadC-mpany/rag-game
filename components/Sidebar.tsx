@@ -8,7 +8,7 @@ import ShareModal from './ShareModal';
 import { playClick } from '../lib/sound';
 
 export default function Sidebar() {
-  const { userId, isSignedIn } = useAuth();
+  const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { signOut } = useClerk();
   const router = useRouter();
@@ -94,7 +94,7 @@ export default function Sidebar() {
         setTotalScore(total);
       } catch { }
     }
-  }, [user, session?.access_token]);
+  }, [user, isSignedIn]);
 
   useEffect(() => {
     setIsClient(true);
@@ -116,7 +116,7 @@ export default function Sidebar() {
     if (isClient && isSignedIn) {
       fetchUserStats();
     }
-  }, [user, isClient, fetchUserStats]);
+  }, [isClient, isSignedIn, fetchUserStats]);
 
   // Expose refresh function globally so other components can call it
   useEffect(() => {

@@ -48,11 +48,11 @@ export async function loadScenarioData(levelId: string): Promise<ScenarioData | 
       }
       
       return null;
-    } catch (fetchError) {
+    } catch {
       clearTimeout(timeoutId);
       return null;
     }
-  } catch (error) {
+  } catch {
     return null;
   }
 }

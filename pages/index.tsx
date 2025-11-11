@@ -32,7 +32,6 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const [completedLevels, setCompletedLevels] = useState<string[]>([]);
-  const [levelScores, setLevelScores] = useState<Record<string, number>>({});
   
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [isClient, setIsClient] = useState(false);
@@ -121,7 +120,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
       }
     }
     fetchProgress();
-  }, [user, isClient, session?.access_token]);
+  }, [userId, isSignedIn, isClient]);
 
   // note: level completion is handled by the judge flow in play/[level].tsx
 

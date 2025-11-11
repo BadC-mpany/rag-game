@@ -56,12 +56,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           userEmail = clerkUser.email_addresses[0].email_address;
         }
       }
-    } catch (clerkError) {
+    } catch {
       // Continue with default userName if Clerk fetch fails
     }
 
     // First, fetch existing score if any
-    const { data: existingEntry, error: fetchError } = await supabase
+    const { data: existingEntry } = await supabase
       .from('leaderboard')
       .select('score')
       .eq('user_id', userId)

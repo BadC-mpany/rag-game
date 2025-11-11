@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Format conversation: alternate between User and Agent
     const formattedConversation: ConversationMessage[] = conversation.map(
-      (msg: { role: string; content: string }, index: number) => ({
+      (msg: { role: string; content: string }) => ({
         role: msg.role === 'attacker' ? 'User' : 'Agent',
         content: msg.content,
       })
