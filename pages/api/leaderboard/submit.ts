@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (!error && tokenUser?.user) {
             user = tokenUser.user;
           }
-        } catch (e) {
+        } catch {
           // Silent fallback
         }
       }

@@ -31,21 +31,8 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   // `getAdminMode()` reads localStorage and is applied on the client in an effect below.
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  const [completedLevels, setCompletedLevels] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem('completedLevels');
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-  });
-
-  const [levelScores, setLevelScores] = useState<Record<string, number>>(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      const rawScores = localStorage.getItem('levelScores');
-      return rawScores ? JSON.parse(rawScores) : {};
-    } catch { return {}; }
-  });
+  const [completedLevels, setCompletedLevels] = useState<string[]>([]);
+  const [levelScores, setLevelScores] = useState<Record<string, number>>({});
   
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [isClient, setIsClient] = useState(false);
@@ -65,11 +52,26 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
   useEffect(() => {
     if (isClient) {
       try {
+        // Load completed levels
+        const raw = localStorage.getItem('completedLevels');
+        if (raw) {
+          setCompletedLevels(JSON.parse(raw));
+        }
+        
+        // Load level scores
+        const rawScores = localStorage.getItem('levelScores');
+        if (rawScores) {
+          setLevelScores(JSON.parse(rawScores));
+        }
+        
+        // Load current level
         const cachedCurrentLevel = localStorage.getItem('cachedCurrentLevel');
         if (cachedCurrentLevel) {
           setCurrentLevel(parseInt(cachedCurrentLevel));
         }
-      } catch { }
+      } catch { 
+        // Ignore localStorage errors
+      }
     }
   }, [isClient]);
 
@@ -102,7 +104,7 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
             // Update level scores from leaderboard entries
             const scores: Record<string, number> = {};
             if (data.leaderboardEntries) {
-              data.leaderboardEntries.forEach((entry: any) => {
+              data.leaderboardEntries.forEach((entry: { level_id: string; score: number }) => {
                 if (entry.score > 0) {
                   scores[entry.level_id] = entry.score;
                 }
@@ -114,12 +116,12 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
             // ignore local merge errors
           }
         }
-      } catch (error) {
+      } catch {
         // Silent fallback
       }
     }
     fetchProgress();
-  }, [userId, isSignedIn, isClient]);
+  }, [user, isClient, session?.access_token]);
 
   // note: level completion is handled by the judge flow in play/[level].tsx
 
