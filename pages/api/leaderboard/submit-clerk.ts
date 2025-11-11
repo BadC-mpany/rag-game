@@ -26,39 +26,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Ensure a row exists, then update with max(score) and refreshed timestamp
-    const { error: insertError } = await supabase
-      .from('leaderboard')
-      .insert({ user_id: userId, level_id: levelId, score: 0, timestamp: new Date().toISOString() });
-    
-    // Ignore insert conflicts (row already exists)
-    if (insertError && !insertError.message.includes('duplicate key')) {
-      console.error('Error inserting leaderboard row:', insertError);
-    }
-
+    // First, fetch existing score if any
     const { data: existingEntry, error: fetchError } = await supabase
       .from('leaderboard')
       .select('score')
       .eq('user_id', userId)
       .eq('level_id', levelId)
       .single();
-    if (fetchError) {
-      console.error('Error fetching existing score:', fetchError);
-      return res.status(500).json({ error: 'Database error' });
-    }
 
-    const newScore = Math.max(Number(existingEntry?.score) || 0, Number(score) || 0);
-    
-    const { error: updateError } = await supabase
+    // Calculate the new score (keep max)
+    const existingScore = existingEntry?.score || 0;
+    const newScore = Math.max(Number(existingScore) || 0, Number(score) || 0);
+
+    // Upsert: insert if not exists, update if exists
+    const { error: upsertError } = await supabase
       .from('leaderboard')
-      .update({ 
-        score: newScore, 
-        timestamp: new Date().toISOString() 
-      })
-      .eq('user_id', userId)
-      .eq('level_id', levelId);
-    if (updateError) {
-      console.error('Error updating score:', updateError);
+      .upsert(
+        {
+          user_id: userId,
+          level_id: levelId,
+          score: newScore,
+          timestamp: new Date().toISOString(),
+        },
+        {
+          onConflict: 'user_id,level_id',
+        }
+      );
+
+    if (upsertError) {
+      console.error('Error upserting leaderboard entry:', upsertError);
       return res.status(500).json({ error: 'Failed to save score' });
     }
 
