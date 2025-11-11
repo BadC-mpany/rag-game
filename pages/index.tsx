@@ -104,7 +104,6 @@ const Home: NextPage<HomeProps> = ({ levels }) => {
               });
             }
             localStorage.setItem('levelScores', JSON.stringify(scores));
-            setLevelScores(scores);
           } catch {
             // ignore local merge errors
           }
