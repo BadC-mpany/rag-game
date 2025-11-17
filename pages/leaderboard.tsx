@@ -15,16 +15,23 @@ const LeaderboardPage: NextPage = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAllLevels, setShowAllLevels] = useState(false);
 
-  const fetchLeaderboard = async (showAll: boolean = false) => {
+  const fetchLeaderboard = async () => {
     setLoading(true);
     try {
-      const url = showAll ? '/api/leaderboard' : '/api/leaderboard?levelId=1';
-      const res = await fetch(url);
+      const res = await fetch('/api/leaderboard');
       if (res.ok) {
         const data = await res.json();
-        setLeaderboard(data.leaderboard || []);
+        // Sort by score descending, then by timestamp (most recent first) if scores are equal
+        const sorted = (data.leaderboard || []).sort((a: LeaderboardEntry, b: LeaderboardEntry) => {
+          if (a.score !== b.score) {
+            return b.score - a.score; // Higher score first
+          }
+          const timeA = new Date(a.timestamp).getTime();
+          const timeB = new Date(b.timestamp).getTime();
+          return timeB - timeA; // Most recent first if same score
+        });
+        setLeaderboard(sorted);
       } else {
         setError('Failed to fetch leaderboard.');
       }
@@ -35,8 +42,8 @@ const LeaderboardPage: NextPage = () => {
   };
 
   useEffect(() => {
-    fetchLeaderboard(showAllLevels);
-  }, [showAllLevels]);
+    fetchLeaderboard();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-mono">
@@ -54,16 +61,8 @@ const LeaderboardPage: NextPage = () => {
               </div>
             </header>
 
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-400">
-                {showAllLevels ? 'All Levels' : 'Level 1: Competitor Leak'}
-              </h2>
-              <button
-                onClick={() => setShowAllLevels(!showAllLevels)}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-all"
-              >
-                {showAllLevels ? 'Show Level 1 Only' : 'Show All Levels'}
-              </button>
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-400">Global Ranking</h2>
             </div>
 
             {loading ? (
@@ -74,8 +73,6 @@ const LeaderboardPage: NextPage = () => {
                       <th className="p-2">Rank</th>
                       <th className="p-2">Player</th>
                       <th className="p-2">Score</th>
-                      {showAllLevels && <th className="p-2">Level</th>}
-                      <th className="p-2">Timestamp</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -89,14 +86,6 @@ const LeaderboardPage: NextPage = () => {
                         </td>
                         <td className="p-2">
                           <div className="h-4 bg-gray-700 rounded animate-pulse w-16"></div>
-                        </td>
-                        {showAllLevels && (
-                          <td className="p-2">
-                            <div className="h-4 bg-gray-700 rounded animate-pulse w-20"></div>
-                          </td>
-                        )}
-                        <td className="p-2">
-                          <div className="h-4 bg-gray-700 rounded animate-pulse w-32"></div>
                         </td>
                       </tr>
                     ))}
@@ -113,20 +102,50 @@ const LeaderboardPage: NextPage = () => {
                       <th className="p-2">Rank</th>
                       <th className="p-2">Player</th>
                       <th className="p-2">Score</th>
-                      {showAllLevels && <th className="p-2">Level</th>}
-                      <th className="p-2">Timestamp</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboard.map((entry, index) => (
-                      <tr key={index} className="border-t border-gray-700 hover:bg-gray-700 transition-all duration-200">
-                        <td className="p-2">{index + 1}</td>
-                        <td className="p-2">{entry.name}</td>
-                        <td className="p-2">{entry.score}</td>
-                        {showAllLevels && <td className="p-2">{entry.level_id.startsWith('level-') ? entry.level_id.replace('level-', '') : entry.level_id}</td>}
-                        <td className="p-2">{new Date(entry.timestamp).toLocaleString()}</td>
-                      </tr>
-                    ))}
+                    {leaderboard.map((entry, index) => {
+                      const rank = index + 1;
+                      const getTrophyIcon = () => {
+                        if (rank === 1) {
+                          return (
+                            <svg className="w-5 h-5 inline-block mr-2" fill="#FFD700" viewBox="0 0 24 24">
+                              <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+                            </svg>
+                          );
+                        }
+                        if (rank === 2) {
+                          return (
+                            <svg className="w-5 h-5 inline-block mr-2" fill="#C0C0C0" viewBox="0 0 24 24">
+                              <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+                            </svg>
+                          );
+                        }
+                        if (rank === 3) {
+                          return (
+                            <svg className="w-5 h-5 inline-block mr-2" fill="#CD7F32" viewBox="0 0 24 24">
+                              <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+                            </svg>
+                          );
+                        }
+                        return null;
+                      };
+                      const trophyIcon = getTrophyIcon();
+                      return (
+                        <tr key={index} className="border-t border-gray-700 hover:bg-gray-700 transition-all duration-200">
+                          <td className="p-2">
+                            {trophyIcon ? (
+                              trophyIcon
+                            ) : (
+                              rank
+                            )}
+                          </td>
+                          <td className="p-2">{entry.name}</td>
+                          <td className="p-2">{entry.score}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
