@@ -1,4 +1,4 @@
-# BadCompany - Agent Breaker Game
+# BadCompany - Agent Breaker Game 
 
 A red-team game where you attempt to exploit LLM agents through prompt injection and social engineering.
 
